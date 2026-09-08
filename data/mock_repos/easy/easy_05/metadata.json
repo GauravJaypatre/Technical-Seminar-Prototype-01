@@ -1,0 +1,15 @@
+{
+  "task_id": "easy_05",
+  "tier": "easy",
+  "name": "config_dict_merger",
+  "domain": "Configuration / Utils",
+  "issue_title": "Shallow dict merge overwrites nested settings",
+  "failing_tests": [
+    "test_nested_merge_preserves_sibling_keys"
+  ],
+  "target_files": [
+    "src/config_merger.py"
+  ],
+  "ground_truth_patch": "--- a/src/config_merger.py\n+++ b/src/config_merger.py\n@@ -1,6 +1,11 @@\n def merge_configs(base: dict, override: dict) -> dict:\n     \"\"\"Merges override dictionary into base dictionary recursively.\"\"\"\n-    result = base.copy()\n-    # BUG: shallow update completely replaces nested dictionaries\n-    result.update(override)\n+    result = {}\n+    for k, v in base.items():\n+        result[k] = v.copy() if isinstance(v, dict) else v\n+    for k, v in override.items():\n+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):\n+            result[k] = merge_configs(result[k], v)\n+        else:\n+            result[k] = v\n     return result",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

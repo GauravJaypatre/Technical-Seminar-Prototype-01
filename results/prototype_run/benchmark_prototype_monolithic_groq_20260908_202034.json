@@ -1,0 +1,38 @@
+[
+  {
+    "run_id": "proto_easy_01_s42",
+    "timestamp": "2026-09-08T20:20:45.103663",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "openai/gpt-oss-120b",
+    "provider": "groq",
+    "model_name": "openai/gpt-oss-120b",
+    "is_prototype": true,
+    "is_live": true,
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": false,
+    "final_pass": false,
+    "iterations_to_success": null,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 10.45,
+    "total_prompt_tokens": 391,
+    "total_completion_tokens": 331,
+    "estimated_cost_usd": 0.0,
+    "peak_ram_mb": 55.25,
+    "raw_patch": "```diff\n--- a/src/query_parser.py\n+++ b/src/query_parser.py\n@@\n-        if '=' in pair:\n-            k, v = pair.split('=', 1)\n-            # BUG: skips if v is empty string\n-            if v:\n-                result[urllib.parse.unquote_plus(k)] = urllib.parse.unquote_plus(v)\n-        else:\n-            result[urllib.parse.unquote_plus(pair)] = ''\n+        if '=' in pair:\n+            # Split only on the first '=', preserving empty values.\n+            k, v = pair.split('=', 1)\n+            # Always store the key, even if the value is an empty string.\n+            result[urllib.parse.unquote_plus(k)] = urllib.parse.unquote_plus(v)\n+        else:\n+            # Parameter without '=', treat as key with empty value.\n+            result[urllib.parse.unquote_plus(pair)] = ''\n```",
+    "sandbox_detail": {
+      "success": false,
+      "exit_code": 2,
+      "execution_time_sec": 0.741,
+      "passed_tests": [],
+      "failed_tests": [],
+      "patch_applied": false,
+      "patch_error": "Failed to locate target file or apply diff hunks.",
+      "stdout_snippet": "",
+      "stderr_snippet": "Patch application failed: Failed to locate target file or apply diff hunks."
+    }
+  }
+]

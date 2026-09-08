@@ -1,0 +1,15 @@
+{
+  "task_id": "med_04",
+  "tier": "medium",
+  "name": "json_schema_validator",
+  "domain": "Validation / Data Types",
+  "issue_title": "Array items schema validation ignored",
+  "failing_tests": [
+    "test_array_items_invalid_element"
+  ],
+  "target_files": [
+    "src/validator.py"
+  ],
+  "ground_truth_patch": "--- a/src/validator.py\n+++ b/src/validator.py\n@@ -17,5 +17,7 @@\n         if expected_type and not isinstance(instance, expected_type):\n             raise SchemaValidationError(f\"Expected {expected_type_name}, got {type(instance).__name__}\")\n     \n-    # BUG: If type is array and 'items' is present in schema, items are not checked!\n+    if expected_type_name == \"array\" and \"items\" in schema and isinstance(instance, list):\n+        for item in instance:\n+            validate_instance(item, schema[\"items\"])\n     return True",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

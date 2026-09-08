@@ -1,0 +1,15 @@
+{
+  "task_id": "easy_02",
+  "tier": "easy",
+  "name": "leap_year_calculator",
+  "domain": "Datetime / Calendar",
+  "issue_title": "Leap year function incorrectly identifies century years",
+  "failing_tests": [
+    "test_century_non_leap_years"
+  ],
+  "target_files": [
+    "src/calendar_utils.py"
+  ],
+  "ground_truth_patch": "--- a/src/calendar_utils.py\n+++ b/src/calendar_utils.py\n@@ -2,9 +2,8 @@\n     \"\"\"Determines if a given year is a leap year in the Gregorian calendar.\"\"\"\n     if not isinstance(year, int) or year < 1:\n         raise ValueError(\"Year must be a positive integer.\")\n-    # BUG: century check logic inverted\n-    if year % 4 == 0:\n-        if year % 100 == 0:\n-            return True\n+    if year % 400 == 0:\n         return True\n-    return False\n+    if year % 100 == 0:\n+        return False\n+    return year % 4 == 0",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

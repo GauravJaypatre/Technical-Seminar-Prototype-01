@@ -1,0 +1,15 @@
+{
+  "task_id": "easy_01",
+  "tier": "easy",
+  "name": "url_query_parser",
+  "domain": "Networking / Web",
+  "issue_title": "Query parser drops keys with empty values",
+  "failing_tests": [
+    "test_empty_value_retained"
+  ],
+  "target_files": [
+    "src/query_parser.py"
+  ],
+  "ground_truth_patch": "--- a/src/query_parser.py\n+++ b/src/query_parser.py\n@@ -14,9 +14,7 @@\n             continue\n         if '=' in pair:\n             k, v = pair.split('=', 1)\n-            # BUG: skips if v is empty string\n-            if v:\n-                result[urllib.parse.unquote_plus(k)] = urllib.parse.unquote_plus(v)\n+            result[urllib.parse.unquote_plus(k)] = urllib.parse.unquote_plus(v)\n         else:\n             result[urllib.parse.unquote_plus(pair)] = ''\n     return result",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

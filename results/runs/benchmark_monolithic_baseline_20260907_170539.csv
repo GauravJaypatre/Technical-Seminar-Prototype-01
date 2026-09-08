@@ -1,0 +1,5 @@
+run_id,timestamp,task_id,difficulty,system,model_profile,seed,temperature,top_p,pass_at_1,final_pass,iterations_to_success,total_iterations_run,cumulative_wall_clock_sec,total_prompt_tokens,total_completion_tokens,estimated_cost_usd,peak_ram_mb
+mono_easy_01_s42,2026-09-07T17:05:41.412711,easy_01,easy,monolithic_frontier,claude-3-5-sonnet,42,0.2,0.95,1,1,1,1,1.58,1621,501,0.01238,58.29
+mono_easy_01_s43,2026-09-07T17:05:43.134155,easy_01,easy,monolithic_frontier,claude-3-5-sonnet,43,0.2,0.95,0,0,None,1,1.57,1429,527,0.01219,58.67
+mono_easy_02_s42,2026-09-07T17:05:45.072788,easy_02,easy,monolithic_frontier,claude-3-5-sonnet,42,0.2,0.95,1,1,1,1,1.8,1686,444,0.01172,58.65
+mono_easy_02_s43,2026-09-07T17:05:46.568307,easy_02,easy,monolithic_frontier,claude-3-5-sonnet,43,0.2,0.95,1,1,1,1,1.35,1723,548,0.01339,58.61

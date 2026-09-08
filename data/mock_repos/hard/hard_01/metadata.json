@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_01",
+  "tier": "hard",
+  "name": "topological_sorter_dag",
+  "domain": "Algorithms / Compilers",
+  "issue_title": "False positive cycle detection across disjoint component paths",
+  "failing_tests": [
+    "test_diamond_dependency_dag"
+  ],
+  "target_files": [
+    "src/graph.py",
+    "src/sorter.py"
+  ],
+  "ground_truth_patch": "--- a/src/sorter.py\n+++ b/src/sorter.py\n@@ -8,19 +8,23 @@\n         self.graph = graph\n \n     def sort(self) -> list[str]:\n-        visited = set()\n+        visiting = set()\n+        processed = set()\n         result = []\n \n         def dfs(node):\n-            # BUG: visited node is flagged as cycle even if fully processed in earlier tree branch\n-            if node in visited:\n+            if node in visiting:\n                 raise CycleError(f\"Cycle detected at node {node.name}\")\n-            visited.add(node)\n+            if node in processed:\n+                return\n+            visiting.add(node)\n             for dep in node.dependencies:\n                 dfs(dep)\n+            visiting.remove(node)\n+            processed.add(node)\n             result.append(node.name)\n \n         for node in self.graph.nodes.values():\n-            if node not in visited:\n+            if node not in processed:\n                 dfs(node)\n         return result",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

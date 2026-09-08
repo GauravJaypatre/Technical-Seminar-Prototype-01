@@ -1,0 +1,149 @@
+[
+  {
+    "run_id": "mono_easy_01_s42",
+    "timestamp": "2026-09-07T17:05:24.480612",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "claude-3-5-sonnet",
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.43,
+    "total_prompt_tokens": 1232,
+    "total_completion_tokens": 411,
+    "estimated_cost_usd": 0.00986,
+    "peak_ram_mb": 56.99,
+    "sandbox_detail": {
+      "success": true,
+      "exit_code": 0,
+      "execution_time_sec": 1.2,
+      "passed_tests": [
+        "tests/test_query_parser.py::test_basic_parsing",
+        "tests/test_query_parser.py::test_leading_question_mark",
+        "tests/test_query_parser.py::test_empty_string",
+        "tests/test_query_parser.py::test_empty_value_retained",
+        "tests/test_query_parser.py::test_encoded_spaces"
+      ],
+      "failed_tests": [],
+      "patch_applied": true,
+      "patch_error": null,
+      "stdout_snippet": "============================= test session starts =============================\ncollecting ... collected 5 items\n\ntests/test_query_parser.py::test_basic_parsing PASSED                    [ 20%]\ntests/test_query_parser.py::test_leading_question_mark PASSED            [ 40%]\ntests/test_query_parser.py::test_empty_string PASSED                     [ 60%]\ntests/test_query_parser.py::test_empty_value_retained PASSED             [ 80%]\ntests/test_query_parser.py::test_encoded_spaces PASSED                   [100%]\n\n============================== 5 passed in 0.03s ==============================\n",
+      "stderr_snippet": ""
+    }
+  },
+  {
+    "run_id": "mono_easy_01_s43",
+    "timestamp": "2026-09-07T17:05:26.219018",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "claude-3-5-sonnet",
+    "seed": 43,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.58,
+    "total_prompt_tokens": 1349,
+    "total_completion_tokens": 429,
+    "estimated_cost_usd": 0.01048,
+    "peak_ram_mb": 59.29,
+    "sandbox_detail": {
+      "success": true,
+      "exit_code": 0,
+      "execution_time_sec": 1.35,
+      "passed_tests": [
+        "tests/test_query_parser.py::test_basic_parsing",
+        "tests/test_query_parser.py::test_leading_question_mark",
+        "tests/test_query_parser.py::test_empty_string",
+        "tests/test_query_parser.py::test_empty_value_retained",
+        "tests/test_query_parser.py::test_encoded_spaces"
+      ],
+      "failed_tests": [],
+      "patch_applied": true,
+      "patch_error": null,
+      "stdout_snippet": "============================= test session starts =============================\ncollecting ... collected 5 items\n\ntests/test_query_parser.py::test_basic_parsing PASSED                    [ 20%]\ntests/test_query_parser.py::test_leading_question_mark PASSED            [ 40%]\ntests/test_query_parser.py::test_empty_string PASSED                     [ 60%]\ntests/test_query_parser.py::test_empty_value_retained PASSED             [ 80%]\ntests/test_query_parser.py::test_encoded_spaces PASSED                   [100%]\n\n============================== 5 passed in 0.03s ==============================\n",
+      "stderr_snippet": ""
+    }
+  },
+  {
+    "run_id": "mono_easy_02_s42",
+    "timestamp": "2026-09-07T17:05:27.732792",
+    "task_id": "easy_02",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "claude-3-5-sonnet",
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": false,
+    "final_pass": false,
+    "iterations_to_success": null,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.47,
+    "total_prompt_tokens": 1600,
+    "total_completion_tokens": 575,
+    "estimated_cost_usd": 0.01342,
+    "peak_ram_mb": 57.0,
+    "sandbox_detail": {
+      "success": false,
+      "exit_code": 1,
+      "execution_time_sec": 1.24,
+      "passed_tests": [
+        "tests/test_calendar_utils.py::test_regular_leap_year",
+        "tests/test_calendar_utils.py::test_non_leap_year",
+        "tests/test_calendar_utils.py::test_quad_century_leap_years"
+      ],
+      "failed_tests": [
+        "tests/test_calendar_utils.py::test_century_non_leap_years"
+      ],
+      "patch_applied": true,
+      "patch_error": null,
+      "stdout_snippet": "============================= test session starts =============================\ncollecting ... collected 4 items\n\ntests/test_calendar_utils.py::test_regular_leap_year PASSED              [ 25%]\ntests/test_calendar_utils.py::test_non_leap_year PASSED                  [ 50%]\ntests/test_calendar_utils.py::test_century_non_leap_years FAILED         [ 75%]\ntests/test_calendar_utils.py::test_quad_century_leap_years PASSED        [100%]\n\n========================= 1 failed, 3 passed in 0.07s =========================\n",
+      "stderr_snippet": ""
+    }
+  },
+  {
+    "run_id": "mono_easy_02_s43",
+    "timestamp": "2026-09-07T17:05:29.215811",
+    "task_id": "easy_02",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "claude-3-5-sonnet",
+    "seed": 43,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.42,
+    "total_prompt_tokens": 1781,
+    "total_completion_tokens": 504,
+    "estimated_cost_usd": 0.0129,
+    "peak_ram_mb": 57.15,
+    "sandbox_detail": {
+      "success": true,
+      "exit_code": 0,
+      "execution_time_sec": 1.187,
+      "passed_tests": [
+        "tests/test_calendar_utils.py::test_regular_leap_year",
+        "tests/test_calendar_utils.py::test_non_leap_year",
+        "tests/test_calendar_utils.py::test_century_non_leap_years",
+        "tests/test_calendar_utils.py::test_quad_century_leap_years"
+      ],
+      "failed_tests": [],
+      "patch_applied": true,
+      "patch_error": null,
+      "stdout_snippet": "============================= test session starts =============================\ncollecting ... collected 4 items\n\ntests/test_calendar_utils.py::test_regular_leap_year PASSED              [ 25%]\ntests/test_calendar_utils.py::test_non_leap_year PASSED                  [ 50%]\ntests/test_calendar_utils.py::test_century_non_leap_years PASSED         [ 75%]\ntests/test_calendar_utils.py::test_quad_century_leap_years PASSED        [100%]\n\n============================== 4 passed in 0.03s ==============================\n",
+      "stderr_snippet": ""
+    }
+  }
+]

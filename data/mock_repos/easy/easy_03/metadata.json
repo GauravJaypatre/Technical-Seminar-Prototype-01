@@ -1,0 +1,15 @@
+{
+  "task_id": "easy_03",
+  "tier": "easy",
+  "name": "cli_flag_validator",
+  "domain": "CLI / System",
+  "issue_title": "AttributeError on NoneType optional CLI argument",
+  "failing_tests": [
+    "test_none_flag_handled_safely"
+  ],
+  "target_files": [
+    "src/flag_validator.py"
+  ],
+  "ground_truth_patch": "--- a/src/flag_validator.py\n+++ b/src/flag_validator.py\n@@ -2,7 +2,8 @@\n \n def validate_flag(flag: Optional[str], allowed_flags: Set[str]) -> bool:\n     \"\"\"Validates that a CLI flag is within the allowed set (case-insensitive).\"\"\"\n-    # BUG: does not check if flag is None before calling .lower()\n+    if flag is None:\n+        return False\n     normalized = flag.lower()\n     normalized_allowed = {f.lower() for f in allowed_flags}\n     return normalized in normalized_allowed",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "run_id": "proto_easy_01_s42",
+    "timestamp": "2026-09-08T20:07:26.275876",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "monolithic_frontier",
+    "model_profile": "openai/gpt-oss-120b",
+    "provider": "groq",
+    "model_name": "openai/gpt-oss-120b",
+    "is_prototype": true,
+    "is_live": true,
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "pass_at_1": false,
+    "final_pass": false,
+    "iterations_to_success": null,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 0.7,
+    "total_prompt_tokens": 0,
+    "total_completion_tokens": 0,
+    "estimated_cost_usd": 0.0,
+    "peak_ram_mb": 35.15,
+    "raw_patch": "# API ERROR: BASELINE_API_KEY is set to placeholder 'YOUR_GROQ_API_KEY_HERE'. Please update .env with your real Groq API key.",
+    "sandbox_detail": {
+      "success": false,
+      "exit_code": 2,
+      "execution_time_sec": 0.675,
+      "passed_tests": [],
+      "failed_tests": [],
+      "patch_applied": false,
+      "patch_error": "Failed to locate target file or apply diff hunks.",
+      "stdout_snippet": "",
+      "stderr_snippet": "Patch application failed: Failed to locate target file or apply diff hunks."
+    }
+  }
+]

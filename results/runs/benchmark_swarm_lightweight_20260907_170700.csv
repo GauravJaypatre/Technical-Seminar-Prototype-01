@@ -1,0 +1,5 @@
+run_id,timestamp,task_id,difficulty,system,model_profile,seed,temperature,top_p,pass_at_1,final_pass,iterations_to_success,total_iterations_run,cumulative_wall_clock_sec,total_prompt_tokens,total_completion_tokens,estimated_cost_usd,peak_ram_mb
+swarm_lightweight_easy_01_s42,2026-09-07T17:07:19.195876,easy_01,easy,swarm_slm_lightweight,deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M,42,0.2,0.95,0,1,2,2,18.57,730,163,0.000446,71.88
+swarm_lightweight_easy_01_s43,2026-09-07T17:07:37.653516,easy_01,easy,swarm_slm_lightweight,deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M,43,0.2,0.95,0,1,2,2,18.38,730,163,0.000446,72.22
+swarm_lightweight_easy_02_s42,2026-09-07T17:07:46.995150,easy_02,easy,swarm_slm_lightweight,deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M,42,0.2,0.95,1,1,1,1,9.2,312,114,0.000213,72.88
+swarm_lightweight_easy_02_s43,2026-09-07T17:08:15.336893,easy_02,easy,swarm_slm_lightweight,deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M,43,0.2,0.95,0,1,3,3,28.2,1070,302,0.000686,73.16

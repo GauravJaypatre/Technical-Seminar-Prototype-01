@@ -1,0 +1,15 @@
+{
+  "task_id": "med_02",
+  "tier": "medium",
+  "name": "order_state_machine",
+  "domain": "Business Logic / State Machine",
+  "issue_title": "Order state machine allows invalid transition skipping payment",
+  "failing_tests": [
+    "test_invalid_skip_paid_transition"
+  ],
+  "target_files": [
+    "src/state_machine.py"
+  ],
+  "ground_truth_patch": "--- a/src/state_machine.py\n+++ b/src/state_machine.py\n@@ -12,7 +12,7 @@\n \n class OrderStateMachine:\n     VALID_TRANSITIONS = {\n-        OrderState.CREATED: {OrderState.PAID, OrderState.CANCELLED, OrderState.SHIPPED}, # BUG: SHIPPED shouldn't be here\n+        OrderState.CREATED: {OrderState.PAID, OrderState.CANCELLED},\n         OrderState.PAID: {OrderState.SHIPPED, OrderState.CANCELLED},\n         OrderState.SHIPPED: {OrderState.DELIVERED},\n         OrderState.DELIVERED: set(),",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

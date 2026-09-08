@@ -1,0 +1,16 @@
+{
+  "task_id": "easy_04",
+  "tier": "easy",
+  "name": "regex_version_tokenizer",
+  "domain": "Parsing / Packaging",
+  "issue_title": "Unescaped dot in version splitter splits on any character",
+  "failing_tests": [
+    "test_hyphenated_non_version",
+    "test_non_dot_delimiters"
+  ],
+  "target_files": [
+    "src/version_parser.py"
+  ],
+  "ground_truth_patch": "--- a/src/version_parser.py\n+++ b/src/version_parser.py\n@@ -4,8 +4,7 @@\n     \"\"\"Splits semantic version string into a list of integer components.\"\"\"\n     if not version_string:\n         return []\n-    # BUG: '.' is not escaped in regex pattern\n-    parts = re.split(r'.', version_string)\n+    parts = re.split(r'\\.', version_string)\n     parts = [p for p in parts if p]\n     result = []\n     for p in parts:",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_04",
+  "tier": "hard",
+  "name": "task_scheduler_cancellation",
+  "domain": "Concurrency / Async Execution",
+  "issue_title": "Cancelled parent task fails to cancel dependent queued child tasks",
+  "failing_tests": [
+    "test_cancel_cascades_to_children"
+  ],
+  "target_files": [
+    "src/task.py",
+    "src/scheduler.py"
+  ],
+  "ground_truth_patch": "--- a/src/scheduler.py\n+++ b/src/scheduler.py\n@@ -15,4 +15,6 @@\n             return\n         target = self.tasks[task_id]\n         target.cancel()\n-        # BUG: does not cascade cancellation to dependents\n+        for child in target.dependents:\n+            if child.state == TaskState.PENDING:\n+                self.cancel_task(child.task_id)",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

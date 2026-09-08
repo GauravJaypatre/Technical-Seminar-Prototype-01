@@ -1,0 +1,29 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.*
+!.env.example
+env/
+venv/
+.venv/
+
+# Testing & cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cloned external reference repositories
+reference_llm4se/
+reference_slm_study/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary logs
+*.log

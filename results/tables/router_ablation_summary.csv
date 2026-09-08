@@ -1,0 +1,3 @@
+Condition,Mean_Iterations,Mean_Latency_Sec,Mean_Completion_Tokens,Wilcoxon_Statistic,Wilcoxon_p_value
+Swarm-Full (Router Active),1.28,1.62,121.2,Degenerate (W=0),N/A (All differences = 0)
+Swarm-NoRouter (Direct Pass),1.28,1.53,95.5,Degenerate (W=0),N/A (All differences = 0)

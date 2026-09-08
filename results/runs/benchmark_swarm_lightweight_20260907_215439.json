@@ -1,0 +1,128 @@
+[
+  {
+    "run_id": "swarm_lightweight_easy_01_s42",
+    "timestamp": "2026-09-07T21:54:41.409269",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "swarm_slm_lightweight",
+    "model_profile": "deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M",
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "router_enabled": true,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "resolved_at_iteration": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 2.25,
+    "total_prompt_tokens": 331,
+    "total_completion_tokens": 69,
+    "estimated_cost_usd": 0.0002,
+    "peak_ram_mb": 72.13,
+    "peak_cpu_percent": 59.4,
+    "iteration_history": [
+      {
+        "iteration": 1,
+        "analyzer_latency_sec": 4.227,
+        "verifier_latency_sec": 1.365,
+        "sandbox_exit_code": 0,
+        "tests_passed": true,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_empty_value_retained",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 1.81
+      }
+    ]
+  },
+  {
+    "run_id": "swarm_lightweight_easy_01_s43",
+    "timestamp": "2026-09-07T21:54:42.899442",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "swarm_slm_lightweight",
+    "model_profile": "deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M",
+    "seed": 43,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "router_enabled": true,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "resolved_at_iteration": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.29,
+    "total_prompt_tokens": 331,
+    "total_completion_tokens": 69,
+    "estimated_cost_usd": 0.0002,
+    "peak_ram_mb": 67.83,
+    "peak_cpu_percent": 64.0,
+    "iteration_history": [
+      {
+        "iteration": 1,
+        "analyzer_latency_sec": 3.871,
+        "verifier_latency_sec": 1.248,
+        "sandbox_exit_code": 0,
+        "tests_passed": true,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_empty_value_retained",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 1.27
+      }
+    ]
+  },
+  {
+    "run_id": "swarm_lightweight_easy_01_s44",
+    "timestamp": "2026-09-07T21:54:44.383828",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "swarm_slm_lightweight",
+    "model_profile": "deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M",
+    "seed": 44,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "router_enabled": true,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "resolved_at_iteration": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 1.31,
+    "total_prompt_tokens": 331,
+    "total_completion_tokens": 69,
+    "estimated_cost_usd": 0.0002,
+    "peak_ram_mb": 72.12,
+    "peak_cpu_percent": 69.6,
+    "iteration_history": [
+      {
+        "iteration": 1,
+        "analyzer_latency_sec": 3.915,
+        "verifier_latency_sec": 1.279,
+        "sandbox_exit_code": 0,
+        "tests_passed": true,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_empty_value_retained",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 1.3
+      }
+    ]
+  }
+]

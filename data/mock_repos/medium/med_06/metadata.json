@@ -1,0 +1,15 @@
+{
+  "task_id": "med_06",
+  "tier": "medium",
+  "name": "event_dispatcher",
+  "domain": "Event-Driven / Architecture",
+  "issue_title": "Failing subscriber stops execution of remaining event listeners",
+  "failing_tests": [
+    "test_all_listeners_called_when_first_fails"
+  ],
+  "target_files": [
+    "src/dispatcher.py"
+  ],
+  "ground_truth_patch": "--- a/src/dispatcher.py\n+++ b/src/dispatcher.py\n@@ -15,6 +15,11 @@\n     def dispatch(self, event_name: str, data=None):\n         if event_name not in self._listeners:\n             return\n-        # BUG: stops iteration immediately on first exception\n+        errors = []\n         for listener in self._listeners[event_name]:\n-            listener(data)\n+            try:\n+                listener(data)\n+            except Exception as e:\n+                errors.append(e)\n+        if errors:\n+            raise DispatchAggregateError(errors)",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

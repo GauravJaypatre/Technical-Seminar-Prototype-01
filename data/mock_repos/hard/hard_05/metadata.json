@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_05",
+  "tier": "hard",
+  "name": "query_builder_alias",
+  "domain": "Database / ORM",
+  "issue_title": "Query builder renders raw table name instead of alias in WHERE clause",
+  "failing_tests": [
+    "test_query_with_alias"
+  ],
+  "target_files": [
+    "src/models.py",
+    "src/builder.py"
+  ],
+  "ground_truth_patch": "--- a/src/builder.py\n+++ b/src/builder.py\n@@ -6,8 +6,7 @@\n         self.conditions = []\n \n     def where(self, column: str, value: str):\n-        # BUG: uses table.name unconditionally rather than table.get_qualifier()\n-        self.conditions.append(f\"{self.table.name}.{column} = '{value}'\")\n+        self.conditions.append(f\"{self.table.get_qualifier()}.{column} = '{value}'\")\n         return self\n \n     def to_sql(self) -> str:",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

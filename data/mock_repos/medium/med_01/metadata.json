@@ -1,0 +1,16 @@
+{
+  "task_id": "med_01",
+  "tier": "medium",
+  "name": "case_insensitive_headers",
+  "domain": "Networking / HTTP",
+  "issue_title": "Header dict lookup fails on case variations",
+  "failing_tests": [
+    "test_contains_case_insensitive",
+    "test_get_with_case_variations"
+  ],
+  "target_files": [
+    "src/headers.py"
+  ],
+  "ground_truth_patch": "--- a/src/headers.py\n+++ b/src/headers.py\n@@ -22,11 +22,10 @@\n     def __len__(self):\n         return len(self._store)\n \n-    # BUG: get and __contains__ do not normalize key to lowercase\n     def __contains__(self, key: object) -> bool:\n-        return isinstance(key, str) and key in self._store\n+        return isinstance(key, str) and key.lower() in self._store\n \n     def get(self, key: str, default=None):\n-        if key in self._store:\n-            return self._store[key][1]\n+        if isinstance(key, str) and key.lower() in self._store:\n+            return self._store[key.lower()][1]\n         return default",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

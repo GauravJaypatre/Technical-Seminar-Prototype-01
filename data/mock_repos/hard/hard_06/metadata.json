@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_06",
+  "tier": "hard",
+  "name": "plugin_registry_isolation",
+  "domain": "Extensibility / Architecture",
+  "issue_title": "Shared mutable default causes plugin state cross-contamination",
+  "failing_tests": [
+    "test_plugin_isolation"
+  ],
+  "target_files": [
+    "src/plugin.py",
+    "src/registry.py"
+  ],
+  "ground_truth_patch": "--- a/src/plugin.py\n+++ b/src/plugin.py\n@@ -1,8 +1,7 @@\n class PluginContext:\n-    # BUG: mutable default dictionary shared across instances!\n-    def __init__(self, plugin_name: str, metadata: dict = {}):\n+    def __init__(self, plugin_name: str, metadata: dict = None):\n         self.plugin_name = plugin_name\n-        self.metadata = metadata\n+        self.metadata = {} if metadata is None else metadata\n \n     def set_config(self, key: str, val):\n         self.metadata[key] = val",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

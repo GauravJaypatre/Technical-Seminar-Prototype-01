@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_02",
+  "tier": "hard",
+  "name": "ttl_lru_cache",
+  "domain": "Caching / Data Structures",
+  "issue_title": "Key existence check reports expired keys as present",
+  "failing_tests": [
+    "test_contains_key_respects_expiration"
+  ],
+  "target_files": [
+    "src/storage.py",
+    "src/cache_manager.py"
+  ],
+  "ground_truth_patch": "--- a/src/cache_manager.py\n+++ b/src/cache_manager.py\n@@ -22,6 +22,10 @@\n             return None\n         return node.value\n \n-    # BUG: contains_key checks index directly without checking expiration!\n     def contains_key(self, key: str) -> bool:\n-        return key in self.index\n+        if key not in self.index:\n+            return False\n+        if self.index[key].is_expired(time.time()):\n+            del self.index[key]\n+            return False\n+        return True",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

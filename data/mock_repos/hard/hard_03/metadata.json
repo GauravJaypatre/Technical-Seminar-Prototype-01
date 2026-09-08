@@ -1,0 +1,16 @@
+{
+  "task_id": "hard_03",
+  "tier": "hard",
+  "name": "ast_variable_scoping",
+  "domain": "Compilers / Static Analysis",
+  "issue_title": "Nested comprehension variable leaks into enclosing function scope",
+  "failing_tests": [
+    "test_comprehension_does_not_shadow_outer_var"
+  ],
+  "target_files": [
+    "src/scope.py",
+    "src/analyzer.py"
+  ],
+  "ground_truth_patch": "--- a/src/analyzer.py\n+++ b/src/analyzer.py\n@@ -11,12 +11,12 @@\n         if self.current_scope.parent:\n             self.current_scope = self.current_scope.parent\n \n-    # BUG: enter_comprehension does not create a child scope\n     def enter_comprehension(self):\n-        pass\n+        self.current_scope = SymbolTable(parent=self.current_scope)\n \n     def exit_comprehension(self):\n-        pass\n+        if self.current_scope.parent:\n+            self.current_scope = self.current_scope.parent\n \n     def declare_variable(self, name: str, var_type: str):\n         self.current_scope.define(name, var_type)",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

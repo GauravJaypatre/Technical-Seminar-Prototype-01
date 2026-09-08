@@ -1,0 +1,265 @@
+{
+  "total_tasks": 18,
+  "tiers": {
+    "easy": [
+      {
+        "task_id": "easy_01",
+        "tier": "easy",
+        "name": "url_query_parser",
+        "domain": "Networking / Web",
+        "directory": "data/mock_repos/easy/easy_01"
+      },
+      {
+        "task_id": "easy_02",
+        "tier": "easy",
+        "name": "leap_year_calculator",
+        "domain": "Datetime / Calendar",
+        "directory": "data/mock_repos/easy/easy_02"
+      },
+      {
+        "task_id": "easy_03",
+        "tier": "easy",
+        "name": "cli_flag_validator",
+        "domain": "CLI / System",
+        "directory": "data/mock_repos/easy/easy_03"
+      },
+      {
+        "task_id": "easy_04",
+        "tier": "easy",
+        "name": "regex_version_tokenizer",
+        "domain": "Parsing / Packaging",
+        "directory": "data/mock_repos/easy/easy_04"
+      },
+      {
+        "task_id": "easy_05",
+        "tier": "easy",
+        "name": "config_dict_merger",
+        "domain": "Configuration / Utils",
+        "directory": "data/mock_repos/easy/easy_05"
+      },
+      {
+        "task_id": "easy_06",
+        "tier": "easy",
+        "name": "sample_variance_calculator",
+        "domain": "Math / Statistics",
+        "directory": "data/mock_repos/easy/easy_06"
+      }
+    ],
+    "medium": [
+      {
+        "task_id": "med_01",
+        "tier": "medium",
+        "name": "case_insensitive_headers",
+        "domain": "Networking / HTTP",
+        "directory": "data/mock_repos/medium/med_01"
+      },
+      {
+        "task_id": "med_02",
+        "tier": "medium",
+        "name": "order_state_machine",
+        "domain": "Business Logic / State Machine",
+        "directory": "data/mock_repos/medium/med_02"
+      },
+      {
+        "task_id": "med_03",
+        "tier": "medium",
+        "name": "utf8_stream_reader",
+        "domain": "Encoding / I/O",
+        "directory": "data/mock_repos/medium/med_03"
+      },
+      {
+        "task_id": "med_04",
+        "tier": "medium",
+        "name": "json_schema_validator",
+        "domain": "Validation / Data Types",
+        "directory": "data/mock_repos/medium/med_04"
+      },
+      {
+        "task_id": "med_05",
+        "tier": "medium",
+        "name": "sliding_window_rate_limiter",
+        "domain": "Concurrency / Algorithms",
+        "directory": "data/mock_repos/medium/med_05"
+      },
+      {
+        "task_id": "med_06",
+        "tier": "medium",
+        "name": "event_dispatcher",
+        "domain": "Event-Driven / Architecture",
+        "directory": "data/mock_repos/medium/med_06"
+      }
+    ],
+    "hard": [
+      {
+        "task_id": "hard_01",
+        "tier": "hard",
+        "name": "topological_sorter_dag",
+        "domain": "Algorithms / Compilers",
+        "directory": "data/mock_repos/hard/hard_01"
+      },
+      {
+        "task_id": "hard_02",
+        "tier": "hard",
+        "name": "ttl_lru_cache",
+        "domain": "Caching / Data Structures",
+        "directory": "data/mock_repos/hard/hard_02"
+      },
+      {
+        "task_id": "hard_03",
+        "tier": "hard",
+        "name": "ast_variable_scoping",
+        "domain": "Compilers / Static Analysis",
+        "directory": "data/mock_repos/hard/hard_03"
+      },
+      {
+        "task_id": "hard_04",
+        "tier": "hard",
+        "name": "task_scheduler_cancellation",
+        "domain": "Concurrency / Async Execution",
+        "directory": "data/mock_repos/hard/hard_04"
+      },
+      {
+        "task_id": "hard_05",
+        "tier": "hard",
+        "name": "query_builder_alias",
+        "domain": "Database / ORM",
+        "directory": "data/mock_repos/hard/hard_05"
+      },
+      {
+        "task_id": "hard_06",
+        "tier": "hard",
+        "name": "plugin_registry_isolation",
+        "domain": "Extensibility / Architecture",
+        "directory": "data/mock_repos/hard/hard_06"
+      }
+    ]
+  },
+  "all_tasks": [
+    {
+      "task_id": "easy_01",
+      "tier": "easy",
+      "name": "url_query_parser",
+      "domain": "Networking / Web",
+      "directory": "data/mock_repos/easy/easy_01"
+    },
+    {
+      "task_id": "easy_02",
+      "tier": "easy",
+      "name": "leap_year_calculator",
+      "domain": "Datetime / Calendar",
+      "directory": "data/mock_repos/easy/easy_02"
+    },
+    {
+      "task_id": "easy_03",
+      "tier": "easy",
+      "name": "cli_flag_validator",
+      "domain": "CLI / System",
+      "directory": "data/mock_repos/easy/easy_03"
+    },
+    {
+      "task_id": "easy_04",
+      "tier": "easy",
+      "name": "regex_version_tokenizer",
+      "domain": "Parsing / Packaging",
+      "directory": "data/mock_repos/easy/easy_04"
+    },
+    {
+      "task_id": "easy_05",
+      "tier": "easy",
+      "name": "config_dict_merger",
+      "domain": "Configuration / Utils",
+      "directory": "data/mock_repos/easy/easy_05"
+    },
+    {
+      "task_id": "easy_06",
+      "tier": "easy",
+      "name": "sample_variance_calculator",
+      "domain": "Math / Statistics",
+      "directory": "data/mock_repos/easy/easy_06"
+    },
+    {
+      "task_id": "med_01",
+      "tier": "medium",
+      "name": "case_insensitive_headers",
+      "domain": "Networking / HTTP",
+      "directory": "data/mock_repos/medium/med_01"
+    },
+    {
+      "task_id": "med_02",
+      "tier": "medium",
+      "name": "order_state_machine",
+      "domain": "Business Logic / State Machine",
+      "directory": "data/mock_repos/medium/med_02"
+    },
+    {
+      "task_id": "med_03",
+      "tier": "medium",
+      "name": "utf8_stream_reader",
+      "domain": "Encoding / I/O",
+      "directory": "data/mock_repos/medium/med_03"
+    },
+    {
+      "task_id": "med_04",
+      "tier": "medium",
+      "name": "json_schema_validator",
+      "domain": "Validation / Data Types",
+      "directory": "data/mock_repos/medium/med_04"
+    },
+    {
+      "task_id": "med_05",
+      "tier": "medium",
+      "name": "sliding_window_rate_limiter",
+      "domain": "Concurrency / Algorithms",
+      "directory": "data/mock_repos/medium/med_05"
+    },
+    {
+      "task_id": "med_06",
+      "tier": "medium",
+      "name": "event_dispatcher",
+      "domain": "Event-Driven / Architecture",
+      "directory": "data/mock_repos/medium/med_06"
+    },
+    {
+      "task_id": "hard_01",
+      "tier": "hard",
+      "name": "topological_sorter_dag",
+      "domain": "Algorithms / Compilers",
+      "directory": "data/mock_repos/hard/hard_01"
+    },
+    {
+      "task_id": "hard_02",
+      "tier": "hard",
+      "name": "ttl_lru_cache",
+      "domain": "Caching / Data Structures",
+      "directory": "data/mock_repos/hard/hard_02"
+    },
+    {
+      "task_id": "hard_03",
+      "tier": "hard",
+      "name": "ast_variable_scoping",
+      "domain": "Compilers / Static Analysis",
+      "directory": "data/mock_repos/hard/hard_03"
+    },
+    {
+      "task_id": "hard_04",
+      "tier": "hard",
+      "name": "task_scheduler_cancellation",
+      "domain": "Concurrency / Async Execution",
+      "directory": "data/mock_repos/hard/hard_04"
+    },
+    {
+      "task_id": "hard_05",
+      "tier": "hard",
+      "name": "query_builder_alias",
+      "domain": "Database / ORM",
+      "directory": "data/mock_repos/hard/hard_05"
+    },
+    {
+      "task_id": "hard_06",
+      "tier": "hard",
+      "name": "plugin_registry_isolation",
+      "domain": "Extensibility / Architecture",
+      "directory": "data/mock_repos/hard/hard_06"
+    }
+  ]
+}

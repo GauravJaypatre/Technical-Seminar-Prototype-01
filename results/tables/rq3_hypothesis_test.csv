@@ -1,0 +1,5 @@
+Tier,Swarm_Pass@1,Swarm_Final_Pass@K,Self_Correction_Gain,Monolithic_Pass@1,Paired_t_stat,p_value_paired_t
+Easy,0.722,1.0,0.278,0.8,3.873,0.0117
+Medium,0.222,1.0,0.778,0.533,7.0,0.0009
+Hard,0.167,0.944,0.778,0.433,7.753,0.0006
+Overall (N=18),0.37,0.981,0.611,0.589,8.307,0.0

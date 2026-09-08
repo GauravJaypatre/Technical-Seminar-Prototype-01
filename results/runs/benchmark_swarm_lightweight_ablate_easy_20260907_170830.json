@@ -1,0 +1,119 @@
+[
+  {
+    "run_id": "swarm_lightweight_easy_01_s42",
+    "timestamp": "2026-09-07T17:08:53.919593",
+    "task_id": "easy_01",
+    "difficulty": "easy",
+    "system": "swarm_slm_lightweight",
+    "model_profile": "deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M",
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "router_enabled": false,
+    "pass_at_1": false,
+    "final_pass": true,
+    "iterations_to_success": 3,
+    "total_iterations_run": 3,
+    "cumulative_wall_clock_sec": 23.5,
+    "total_prompt_tokens": 977,
+    "total_completion_tokens": 232,
+    "estimated_cost_usd": 0.000605,
+    "peak_ram_mb": 72.21,
+    "peak_cpu_percent": 64.9,
+    "iteration_history": [
+      {
+        "iteration": 1,
+        "analyzer_latency_sec": 4.351,
+        "verifier_latency_sec": 4.044,
+        "sandbox_exit_code": 1,
+        "tests_passed": false,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [
+          "tests/test_query_parser.py::test_empty_value_retained"
+        ],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 9.24
+      },
+      {
+        "iteration": 2,
+        "analyzer_latency_sec": 4.311,
+        "verifier_latency_sec": 4.06,
+        "sandbox_exit_code": 1,
+        "tests_passed": false,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [
+          "tests/test_query_parser.py::test_empty_value_retained"
+        ],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 9.1
+      },
+      {
+        "iteration": 3,
+        "analyzer_latency_sec": 4.356,
+        "verifier_latency_sec": 1.061,
+        "sandbox_exit_code": 0,
+        "tests_passed": true,
+        "passed_tests": [
+          "tests/test_query_parser.py::test_basic_parsing",
+          "tests/test_query_parser.py::test_leading_question_mark",
+          "tests/test_query_parser.py::test_empty_string",
+          "tests/test_query_parser.py::test_empty_value_retained",
+          "tests/test_query_parser.py::test_encoded_spaces"
+        ],
+        "failed_tests": [],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 5.17
+      }
+    ]
+  },
+  {
+    "run_id": "swarm_lightweight_easy_02_s42",
+    "timestamp": "2026-09-07T17:08:59.178271",
+    "task_id": "easy_02",
+    "difficulty": "easy",
+    "system": "swarm_slm_lightweight",
+    "model_profile": "deepseek-coder:1.3b-instruct-q4_K_M+qwen2.5-coder:1.5b-instruct-q4_K_M",
+    "seed": 42,
+    "temperature": 0.2,
+    "top_p": 0.95,
+    "router_enabled": false,
+    "pass_at_1": true,
+    "final_pass": true,
+    "iterations_to_success": 1,
+    "total_iterations_run": 1,
+    "cumulative_wall_clock_sec": 5.07,
+    "total_prompt_tokens": 185,
+    "total_completion_tokens": 89,
+    "estimated_cost_usd": 0.000137,
+    "peak_ram_mb": 64.22,
+    "peak_cpu_percent": 64.7,
+    "iteration_history": [
+      {
+        "iteration": 1,
+        "analyzer_latency_sec": 4.305,
+        "verifier_latency_sec": 1.012,
+        "sandbox_exit_code": 0,
+        "tests_passed": true,
+        "passed_tests": [
+          "tests/test_calendar_utils.py::test_regular_leap_year",
+          "tests/test_calendar_utils.py::test_non_leap_year",
+          "tests/test_calendar_utils.py::test_century_non_leap_years",
+          "tests/test_calendar_utils.py::test_quad_century_leap_years"
+        ],
+        "failed_tests": [],
+        "patch_applied": true,
+        "iteration_elapsed_sec": 5.07
+      }
+    ]
+  }
+]

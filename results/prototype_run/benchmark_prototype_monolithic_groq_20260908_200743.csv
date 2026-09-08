@@ -1,0 +1,7 @@
+run_id,timestamp,task_id,difficulty,system,model_profile,provider,model_name,is_prototype,seed,temperature,top_p,pass_at_1,final_pass,iterations_to_success,total_iterations_run,cumulative_wall_clock_sec,total_prompt_tokens,total_completion_tokens,estimated_cost_usd,peak_ram_mb
+proto_easy_01_s42,2026-09-08T20:07:44.924825,easy_01,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,1,1,1,1,1.31,1385,546,0.0,60.7
+proto_easy_02_s42,2026-09-08T20:07:45.788586,easy_02,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,0,0,None,1,0.83,1685,590,0.0,32.1
+proto_easy_03_s42,2026-09-08T20:07:47.508654,easy_03,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,1,1,1,1,1.54,1465,520,0.0,55.79
+proto_easy_04_s42,2026-09-08T20:07:49.007090,easy_04,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,1,1,1,1,1.33,1550,509,0.0,61.48
+proto_easy_05_s42,2026-09-08T20:07:50.516583,easy_05,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,1,1,1,1,1.38,1540,571,0.0,61.35
+proto_easy_06_s42,2026-09-08T20:07:52.230816,easy_06,easy,monolithic_frontier,openai/gpt-oss-120b,groq,openai/gpt-oss-120b,True,42,0.2,0.95,1,1,1,1,1.52,1507,548,0.0,53.8

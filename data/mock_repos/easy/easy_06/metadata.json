@@ -1,0 +1,16 @@
+{
+  "task_id": "easy_06",
+  "tier": "easy",
+  "name": "sample_variance_calculator",
+  "domain": "Math / Statistics",
+  "issue_title": "Sample variance uses population N divisor instead of Bessel's correction N-1",
+  "failing_tests": [
+    "test_single_element_raises",
+    "test_unbiased_variance_calculation"
+  ],
+  "target_files": [
+    "src/stats_utils.py"
+  ],
+  "ground_truth_patch": "--- a/src/stats_utils.py\n+++ b/src/stats_utils.py\n@@ -2,9 +2,8 @@\n \n def sample_variance(data: List[float]) -> float:\n     \"\"\"Computes unbiased sample variance (Bessel's correction).\"\"\"\n-    if not data:\n-        raise ValueError(\"Data list cannot be empty.\")\n+    if len(data) < 2:\n+        raise ValueError(\"Sample variance requires at least 2 data points.\")\n     \n     mean = sum(data) / len(data)\n-    # BUG: divides by len(data) instead of len(data) - 1\n-    return sum((x - mean) ** 2 for x in data) / len(data)\n+    return sum((x - mean) ** 2 for x in data) / (len(data) - 1)",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}

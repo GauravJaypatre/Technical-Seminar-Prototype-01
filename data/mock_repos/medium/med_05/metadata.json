@@ -1,0 +1,15 @@
+{
+  "task_id": "med_05",
+  "tier": "medium",
+  "name": "sliding_window_rate_limiter",
+  "domain": "Concurrency / Algorithms",
+  "issue_title": "Rate limiter boundary allows request exceeding window limit",
+  "failing_tests": [
+    "test_boundary_expiration"
+  ],
+  "target_files": [
+    "src/rate_limiter.py"
+  ],
+  "ground_truth_patch": "--- a/src/rate_limiter.py\n+++ b/src/rate_limiter.py\n@@ -8,8 +8,7 @@\n         self.timestamps = deque()\n \n     def allow_request(self, current_time: float) -> bool:\n-        # BUG: uses (current_time - timestamp) > window_seconds instead of >=\n-        while self.timestamps and (current_time - self.timestamps[0]) > self.window_seconds:\n+        while self.timestamps and (current_time - self.timestamps[0]) >= self.window_seconds:\n             self.timestamps.popleft()\n \n         if len(self.timestamps) < self.max_requests:",
+  "attribution": "Synthesized canonical defect pattern inspired by real-world open source issues (MIT/Apache-2.0, SWE-bench taxonomy)"
+}
