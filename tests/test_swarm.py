@@ -320,3 +320,37 @@ def test_swarm_graph_retry_exhaustion():
     assert final_state["qa_exhausted"] is True
     # The last candidate patch is forced through for sandbox grading
     assert "Bad patch attempt 2" in final_state["final_patch"]
+
+
+def test_qa_verifier_context_mismatch_rejection(tmp_path):
+    """Checks that QA Verifier catches diff context mismatches against real file content."""
+    mock_client = MagicMock(spec=OllamaClient)
+    verifier = QAVerifierAgent(client=mock_client)
+
+    # Create dummy file with a comment
+    target_file = tmp_path / "utils.py"
+    target_file.write_text(
+        "def compute():\n    # Important internal comment\n    x = 1\n    return x\n",
+        encoding="utf-8"
+    )
+
+    # Diff that hallucinates away the comment
+    bad_diff = """--- a/utils.py
++++ b/utils.py
+@@ -1,4 +1,4 @@
+ def compute():
+-    x = 1
++    x = 2
+     return x
+"""
+
+    res = verifier.verify_patch(
+        candidate_patch=bad_diff,
+        target_files=["utils.py"],
+        issue_text="Update compute",
+        task_dir=str(tmp_path)
+    )
+
+    assert res["is_valid"] is False
+    assert "Diff context does not match" in res["critique"]
+    assert "Important internal comment" in res["critique"]

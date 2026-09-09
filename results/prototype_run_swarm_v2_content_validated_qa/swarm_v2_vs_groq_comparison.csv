@@ -1,0 +1,5 @@
+Tier,Groq N,Swarm v2 N,Groq Pass@1 (%),Swarm v2 Pass@1 (%),Delta Pass@1 (% pts),t-stat (Acc),p-val (Acc),Cohen's d (Acc),Groq Mean Lat (s),Swarm v2 Mean Lat (s),Delta Lat (s),t-stat (Lat),p-val (Lat),Cohen's d (Lat),Groq Mean Tokens,Swarm v2 Mean Tokens,Groq Fallback (%),Swarm v2 Fallback (%),Swarm v2 QA Exhausted (%)
+Overall,90,90,85.56,4.44,-81.11,-18.778,0.0,-2.799,8.3,160.76,152.47,21.885,0.0,3.262,878.5,1794.3,95.56,5.56,74.44
+Easy,30,30,73.33,13.33,-60.0,-5.793,0.0,-1.496,7.45,104.51,97.06,13.942,0.0,3.6,743.0,1461.9,86.67,0.0,70.0
+Medium,30,30,90.0,0.0,-90.0,-16.155,0.0,-4.171,8.59,193.08,184.49,19.902,0.0,5.139,901.5,2108.4,100.0,0.0,96.67
+Hard,30,30,93.33,0.0,-93.33,-20.149,0.0,-5.203,8.84,184.71,175.86,14.479,0.0,3.738,991.1,1812.6,100.0,16.67,56.67

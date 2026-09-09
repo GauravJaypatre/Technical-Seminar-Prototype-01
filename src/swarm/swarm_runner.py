@@ -108,6 +108,17 @@ def run_swarm_baseline(
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # Prevent Windows from sleeping/suspending during long unattended benchmark
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            ES_CONTINUOUS = 0x80000000
+            ES_SYSTEM_REQUIRED = 0x00000001
+            ES_AWAYMODE_REQUIRED = 0x00000002
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+        except Exception:
+            pass
+
     # Compile LangGraph workflow
     ollama_client = OllamaClient() if live else None
     app = build_swarm_graph(

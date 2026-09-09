@@ -92,7 +92,8 @@ def build_swarm_graph(
             candidate_patch=state.get("candidate_patch", ""),
             target_files=state.get("target_files", []),
             issue_text=state.get("issue_text", ""),
-            seed=state.get("seed", 42)
+            seed=state.get("seed", 42),
+            task_dir=state.get("task_dir")
         )
         agents = state.get("agents_involved", [])
         if "qa_verifier" not in agents:

@@ -8,6 +8,7 @@ Implements the three specialized agents of the Multi-SLM Swarm:
 Communicates with local Ollama service via OpenAI-compatible REST endpoints.
 """
 import os
+import re
 import sys
 import time
 import json
@@ -16,7 +17,7 @@ from typing import Optional, Dict, Any, List, Tuple
 
 import requests
 from src.baseline_client import GenerationResult
-from src.sandbox import clean_diff_text
+from src.sandbox import clean_diff_text, _apply_hunks_to_text
 
 logger = logging.getLogger("swarm_agents")
 if not logger.handlers:
@@ -258,7 +259,8 @@ class QAVerifierAgent:
         candidate_patch: str,
         target_files: List[str],
         issue_text: str,
-        seed: int = 42
+        seed: int = 42,
+        task_dir: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Inspects candidate patch.
@@ -306,7 +308,92 @@ class QAVerifierAgent:
                 "latency": 0.0
             }
 
-        # 2. SLM Consistency Verification (Qwen 2.5:0.5b)
+        # 2. Structural Pre-Application Check against actual repository files
+        if task_dir and os.path.exists(task_dir):
+            cleaned = clean_diff_text(patch_str)
+            chunks = re.split(r"(?=^--- )", cleaned, flags=re.MULTILINE)
+            for chunk in chunks:
+                chunk = chunk.strip()
+                if not chunk or not chunk.startswith("--- "):
+                    continue
+                lines = chunk.splitlines()
+                target_file_rel = None
+                for line in lines[:4]:
+                    if line.startswith("+++ "):
+                        raw_target = line[4:].strip().lstrip("b/").lstrip("a/")
+                        target_file_rel = raw_target
+                        break
+
+                if not target_file_rel:
+                    continue
+
+                full_path = os.path.join(task_dir, target_file_rel)
+                if not os.path.exists(full_path):
+                    matched_tf = [tf for tf in target_files if tf.replace("\\", "/").endswith(target_file_rel) or target_file_rel.endswith(tf.replace("\\", "/"))]
+                    if matched_tf:
+                        full_path = os.path.join(task_dir, matched_tf[0])
+
+                if os.path.exists(full_path):
+                    with open(full_path, "r", encoding="utf-8") as f:
+                        file_content = f.read()
+
+                    hunk_lines = [l for l in lines if not l.startswith("--- ") and not l.startswith("+++ ")]
+                    new_txt, _ = _apply_hunks_to_text(file_content, hunk_lines)
+                    if new_txt is None:
+                        # Locate exact line discrepancy for targeted critique
+                        file_lines = file_content.splitlines()
+                        hunk_indices = [i for i, line in enumerate(hunk_lines) if line.startswith("@@")]
+                        mismatch_critique = None
+                        for idx_pos in range(len(hunk_indices)):
+                            start_idx = hunk_indices[idx_pos]
+                            end_idx = hunk_indices[idx_pos + 1] if idx_pos + 1 < len(hunk_indices) else len(hunk_lines)
+                            hunk_header = hunk_lines[start_idx]
+                            hunk_body = hunk_lines[start_idx + 1:end_idx]
+
+                            m = re.match(r"@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", hunk_header)
+                            orig_start = int(m.group(1)) - 1 if m else 0
+
+                            old_lines = []
+                            for l in hunk_body:
+                                if l.startswith("-") or l.startswith(" "):
+                                    old_lines.append(l[1:])
+                                elif not l.startswith("+") and not l.startswith("\\"):
+                                    old_lines.append(l)
+
+                            for offset, old_l in enumerate(old_lines):
+                                target_idx = orig_start + offset
+                                if target_idx < len(file_lines):
+                                    actual_l = file_lines[target_idx]
+                                    if actual_l.rstrip() != old_l.rstrip():
+                                        mismatch_critique = (
+                                            f"Diff context does not match file '{target_file_rel}' around line {target_idx + 1}: "
+                                            f"expected '{actual_l.strip()}', but diff assumed '{old_l.strip()}'. "
+                                            f"Reproduce exact source lines (including all comments and whitespace) in the diff context."
+                                        )
+                                        break
+                                else:
+                                    mismatch_critique = (
+                                        f"Diff references line {target_idx + 1} beyond end of file '{target_file_rel}' "
+                                        f"({len(file_lines)} lines total)."
+                                    )
+                                    break
+                            if mismatch_critique:
+                                break
+
+                        if not mismatch_critique:
+                            mismatch_critique = (
+                                f"Diff context lines for '{target_file_rel}' could not be matched against the repository file. "
+                                f"Ensure surrounding lines and comments exactly match the file content."
+                            )
+
+                        return {
+                            "is_valid": False,
+                            "critique": mismatch_critique,
+                            "tokens": 0,
+                            "latency": 0.0
+                        }
+
+        # 3. SLM Consistency Verification (Qwen 2.5:0.5b)
         verification_prompt = f"""You are a strict QA verification engineer reviewing an automated code patch.
 Target files allowed: {target_files}
 

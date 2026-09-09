@@ -1,0 +1,13 @@
+System,Tier,N,Pass@1 (%),Mean Latency (s),Mean Prompt Tokens,Mean Comp Tokens,Total Tokens,Fallback Rate (%),QA Exhausted (%),Mean QA Retries
+Groq Monolithic (120B),Overall,90,85.56,8.3,413.9,464.6,878.5,95.56,0.0,0.0
+Groq Monolithic (120B),Easy,30,73.33,7.45,332.3,410.7,743.0,86.67,0.0,0.0
+Groq Monolithic (120B),Medium,30,90.0,8.59,416.2,485.3,901.5,100.0,0.0,0.0
+Groq Monolithic (120B),Hard,30,93.33,8.84,493.2,497.9,991.1,100.0,0.0,0.0
+Swarm v1 (Header-Only QA),Overall,90,0.0,87.91,889.6,312.6,1202.3,7.78,0.0,0.03
+Swarm v1 (Header-Only QA),Easy,30,0.0,54.69,742.0,204.2,946.2,0.0,0.0,0.03
+Swarm v1 (Header-Only QA),Medium,30,0.0,92.9,944.8,335.4,1280.2,0.0,0.0,0.07
+Swarm v1 (Header-Only QA),Hard,30,0.0,116.13,982.1,398.3,1380.4,23.33,0.0,0.0
+Swarm v2 (Content-Validated QA),Overall,90,4.44,160.76,1250.2,544.1,1794.3,5.56,74.44,1.52
+Swarm v2 (Content-Validated QA),Easy,30,13.33,104.51,1075.3,386.6,1461.9,0.0,70.0,1.5
+Swarm v2 (Content-Validated QA),Medium,30,0.0,193.08,1435.2,673.2,2108.4,0.0,96.67,1.93
+Swarm v2 (Content-Validated QA),Hard,30,0.0,184.71,1240.0,572.6,1812.6,16.67,56.67,1.13
