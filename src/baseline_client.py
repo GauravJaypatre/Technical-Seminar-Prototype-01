@@ -63,26 +63,85 @@ class GenerationResult:
 
 class RPMThrottle:
     """
-    Enforces a strict requests-per-minute ceiling via sliding interval delay.
-    Prevents hitting free-tier RPM ceilings (e.g. Groq 30 RPM limit).
+    Enforces requests-per-minute (RPM) and tokens-per-minute (TPM) ceilings.
+    Prevents hitting provider rate limits (e.g. Groq 8,000 TPM / 1,000 RPM)
+    via sliding interval delays, live rate-limit header tracking, and rolling 60s
+    token sum accounting.
     """
-    def __init__(self, max_rpm: int = 25):
+    def __init__(
+        self,
+        max_rpm: int = 25,
+        max_tpm: Optional[int] = None,
+        safe_token_margin: int = 1500
+    ):
         self.max_rpm = max_rpm
-        self.min_interval = 60.0 / max(1, max_rpm)
+        self.max_tpm = max_tpm
+        self.safe_token_margin = safe_token_margin
+        self.min_interval = 60.0 / max(1, max_rpm) if max_rpm > 0 else 0.0
         self.last_request_time: float = 0.0
+        # Rolling token history: list of (timestamp, token_count)
+        self.token_history: list[tuple[float, int]] = []
+        self.last_remaining_tokens: Optional[int] = None
+        self.last_reset_sec: Optional[float] = None
+
+    def record_usage(
+        self,
+        total_tokens: int,
+        remaining_tokens: Optional[int] = None,
+        reset_sec: Optional[float] = None
+    ):
+        """Records token usage from completed request and updates live header limits."""
+        now = time.time()
+        if total_tokens > 0:
+            self.token_history.append((now, total_tokens))
+        self.last_remaining_tokens = remaining_tokens
+        self.last_reset_sec = reset_sec
+
+    def _prune_token_history(self, now: float):
+        """Discards token events older than 60 seconds."""
+        cutoff = now - 60.0
+        self.token_history = [(ts, tok) for ts, tok in self.token_history if ts >= cutoff]
 
     def wait_if_needed(self):
-        if self.max_rpm <= 0:
-            return
         now = time.time()
-        elapsed_since_last = now - self.last_request_time
-        if elapsed_since_last < self.min_interval:
-            wait_time = self.min_interval - elapsed_since_last
+
+        # 1. Enforce RPM interval
+        if self.max_rpm > 0:
+            elapsed_since_last = now - self.last_request_time
+            if elapsed_since_last < self.min_interval:
+                wait_time = self.min_interval - elapsed_since_last
+                logger.info(
+                    f"[Throttle] Rate limit throttle ({self.max_rpm} RPM): "
+                    f"waiting {wait_time:.2f}s before next request..."
+                )
+                time.sleep(wait_time)
+                now = time.time()
+
+        # 2. Check live remaining tokens if reported by header
+        if self.last_remaining_tokens is not None and self.last_remaining_tokens < self.safe_token_margin:
+            wait_time = max(0.5, (self.last_reset_sec or 2.0) + 0.5)
             logger.info(
-                f"[Throttle] Rate limit throttle ({self.max_rpm} RPM): "
-                f"waiting {wait_time:.2f}s before next request..."
+                f"[Throttle] TPM headroom low ({self.last_remaining_tokens} tokens remaining < {self.safe_token_margin}): "
+                f"waiting {wait_time:.2f}s for token bucket refill..."
             )
             time.sleep(wait_time)
+            self.last_remaining_tokens = None
+            now = time.time()
+
+        # 3. Check rolling 60s window if max_tpm configured
+        if self.max_tpm and self.max_tpm > 0:
+            self._prune_token_history(now)
+            current_window_tokens = sum(tok for _, tok in self.token_history)
+            if current_window_tokens + self.safe_token_margin > self.max_tpm:
+                if self.token_history:
+                    oldest_ts, _ = self.token_history[0]
+                    wait_time = max(0.5, (oldest_ts + 60.0) - now + 0.5)
+                    logger.info(
+                        f"[Throttle] Rolling 60s TPM ceiling ({current_window_tokens}/{self.max_tpm} tokens used): "
+                        f"waiting {wait_time:.2f}s for sliding window capacity..."
+                    )
+                    time.sleep(wait_time)
+
         self.last_request_time = time.time()
 
 
@@ -116,11 +175,25 @@ class AnthropicBackend(BaseLLMBackend):
     ):
         model = model_name or os.environ.get("BASELINE_MODEL", "claude-3-5-sonnet-20241022")
         super().__init__(provider="anthropic", model_name=model)
+        prov_env = os.environ.get("BASELINE_PROVIDER", "anthropic").lower().strip()
+        env_baseline_key = os.environ.get("BASELINE_API_KEY") if prov_env == "anthropic" else None
         self.api_key = (
             api_key or
             os.environ.get("ANTHROPIC_API_KEY") or
-            os.environ.get("BASELINE_API_KEY")
+            env_baseline_key
         )
+
+        # Provider mismatch guard: prevent Groq / OpenRouter keys from being silently passed to Anthropic
+        if self.api_key:
+            key_str = self.api_key.strip()
+            if key_str.startswith("gsk_"):
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'anthropic', but API key starts with 'gsk_' (Groq key prefix)."
+                )
+            if key_str.startswith("sk-or-"):
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'anthropic', but API key starts with 'sk-or-' (OpenRouter key prefix)."
+                )
 
     def generate(
         self,
@@ -163,39 +236,44 @@ class AnthropicBackend(BaseLLMBackend):
 
 class OpenAICompatBackend(BaseLLMBackend):
     """
-    OpenAI-compatible backend for Groq, NVIDIA NIM, OpenAI, Ollama, etc.
-    Uses standard HTTP via `requests` to prevent third-party SDK version conflicts.
+    OpenAI-Compatible REST Client.
+    Supports Groq, NVIDIA NIM, OpenAI, OpenRouter, and local Ollama.
     Features:
-    - Configurable base_url, model, and auth headers.
-    - RPM throttling (default 25 RPM).
+    - Zero extra dependencies (pure `requests`).
+    - RPM/TPM adaptive throttling (calibrated to provider ceilings).
     - Exponential backoff with jitter on 429 and 5xx status codes.
     - Automatic `Retry-After` header inspection.
+    - Explicit provider-mismatch assertions to prevent silent cross-routing.
     """
     # Provider-specific default configurations
     PROVIDER_DEFAULTS = {
         "groq": {
             "base_url": "https://api.groq.com/openai/v1",
             "model": "openai/gpt-oss-120b",
-            "suggested_models": ["llama-3.3-70b-versatile", "openai/gpt-oss-120b"],
-            "default_rpm": 25
+            "suggested_models": ["openai/gpt-oss-120b", "llama-3.3-70b-versatile"],
+            "default_rpm": 8,  # Calibrated for Groq 8,000 TPM limit on openai/gpt-oss-120b
+            "max_tpm": 8000
         },
         "nvidia": {
             "base_url": "https://integrate.api.nvidia.com/v1",
             "model": "meta/llama-3.3-70b-instruct",
             "suggested_models": ["meta/llama-3.3-70b-instruct"],
-            "default_rpm": 20
+            "default_rpm": 20,
+            "max_tpm": None
         },
         "openrouter": {
             "base_url": "https://openrouter.ai/api/v1",
             "model": "openai/gpt-oss-120b",
             "suggested_models": ["openai/gpt-oss-120b"],
-            "default_rpm": 25
+            "default_rpm": 25,
+            "max_tpm": None
         },
         "openai": {
             "base_url": "https://api.openai.com/v1",
             "model": "gpt-4o",
             "suggested_models": ["gpt-4o", "gpt-4o-mini"],
-            "default_rpm": 50
+            "default_rpm": 50,
+            "max_tpm": None
         }
     }
 
@@ -206,6 +284,7 @@ class OpenAICompatBackend(BaseLLMBackend):
         base_url: Optional[str] = None,
         model_name: Optional[str] = None,
         max_rpm: Optional[int] = None,
+        max_tpm: Optional[int] = None,
         max_retries: int = 5,
         timeout_sec: float = 60.0
     ):
@@ -232,11 +311,71 @@ class OpenAICompatBackend(BaseLLMBackend):
 
         # Throttle configuration
         env_rpm = os.environ.get("BASELINE_MAX_RPM")
-        resolved_rpm = int(env_rpm) if env_rpm else (max_rpm or defaults.get("default_rpm", 25))
-        self.throttle = RPMThrottle(max_rpm=resolved_rpm)
+        resolved_rpm = int(env_rpm) if env_rpm else (max_rpm if max_rpm is not None else defaults.get("default_rpm", 25))
+        resolved_tpm = max_tpm if max_tpm is not None else defaults.get("max_tpm", None)
+        self.throttle = RPMThrottle(max_rpm=resolved_rpm, max_tpm=resolved_tpm)
 
         self.max_retries = max_retries
         self.timeout_sec = timeout_sec
+
+        # Provider alignment guard: prevent accidental cross-routing
+        self._validate_provider_alignment()
+
+    def _validate_provider_alignment(self):
+        """
+        Guards against provider/key/URL mismatch bugs using strict prefix allowlists.
+        Raises ValueError immediately if the key prefix or base_url does not align
+        with the configured provider.
+        """
+        if not self.api_key:
+            return
+
+        key = self.api_key.strip()
+        prov = self.provider.lower()
+
+        # Provider: groq -> Allowlist: 'gsk_'
+        if prov == "groq":
+            if "openrouter.ai" in self.base_url:
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'groq', but base_url points to "
+                    f"'{self.base_url}' (OpenRouter)."
+                )
+            if not (key.startswith("gsk_") or "your_groq_api_key" in key.lower()):
+                foreign_tag = "sk-or- (OpenRouter)" if key.startswith("sk-or-") else (
+                    "sk-ant- (Anthropic)" if key.startswith("sk-ant-") else (
+                        "sk- (OpenAI/other)" if key.startswith("sk-") else "unknown"
+                    )
+                )
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'groq' (allowlist: 'gsk_'), "
+                    f"but API key '{key[:8]}...' has foreign prefix {foreign_tag}."
+                )
+
+        # Provider: openrouter -> Allowlist: 'sk-or-'
+        elif prov == "openrouter":
+            if "groq.com" in self.base_url:
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'openrouter', but base_url points to "
+                    f"'{self.base_url}' (Groq)."
+                )
+            if not (key.startswith("sk-or-") or "your_api_key" in key.lower()):
+                foreign_tag = "gsk_ (Groq)" if key.startswith("gsk_") else (
+                    "sk-ant- (Anthropic)" if key.startswith("sk-ant-") else (
+                        "sk- (OpenAI/other)" if key.startswith("sk-") else "unknown"
+                    )
+                )
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'openrouter' (allowlist: 'sk-or-'), "
+                    f"but API key '{key[:8]}...' has foreign prefix {foreign_tag}."
+                )
+
+        # Provider: openai -> Allowlist: 'sk-' (excluding 'sk-or-' and 'sk-ant-')
+        elif prov == "openai":
+            if not key.startswith("sk-") or key.startswith("sk-or-") or key.startswith("sk-ant-") or key.startswith("gsk_"):
+                raise ValueError(
+                    f"Provider mismatch guard: configured provider is 'openai' (allowlist: 'sk-'), "
+                    f"but API key '{key[:8]}...' is invalid or belongs to another provider."
+                )
 
     def generate(
         self,
@@ -260,21 +399,16 @@ class OpenAICompatBackend(BaseLLMBackend):
 
         import requests
 
-        resolved_base_url = self.base_url
-        extra_headers = {}
-        if self.api_key.startswith("sk-or-"):
-            if "groq.com" in resolved_base_url:
-                resolved_base_url = "https://openrouter.ai/api/v1"
-            extra_headers["HTTP-Referer"] = "https://github.com/MicroSWE-Baseline"
-            extra_headers["X-Title"] = "MicroSWE-Baseline-Prototype"
-
-        url = f"{resolved_base_url}/chat/completions"
+        url = f"{self.base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "User-Agent": "MicroSWE-Baseline-Prototype/1.0",
-            **extra_headers
         }
+        if self.provider == "openrouter":
+            headers["HTTP-Referer"] = "https://github.com/MicroSWE-Baseline"
+            headers["X-Title"] = "MicroSWE-Baseline-Prototype"
+
         payload = {
             "model": self.model_name,
             "messages": [{"role": "user", "content": prompt}],
@@ -291,7 +425,7 @@ class OpenAICompatBackend(BaseLLMBackend):
         backoff_base = 2.0
 
         while attempt <= self.max_retries:
-            # Enforce RPM throttle before each outbound request
+            # Enforce RPM / TPM throttle before each outbound request
             self.throttle.wait_if_needed()
 
             start_time = time.time()
@@ -313,6 +447,27 @@ class OpenAICompatBackend(BaseLLMBackend):
                     usage = data.get("usage", {})
                     prompt_tokens = usage.get("prompt_tokens", 0)
                     completion_tokens = usage.get("completion_tokens", 0)
+                    total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+
+                    # Dynamic live rate-limit header parsing
+                    rem_tokens_hdr = response.headers.get("x-ratelimit-remaining-tokens")
+                    reset_tokens_hdr = response.headers.get("x-ratelimit-reset-tokens")
+                    rem_tokens = int(rem_tokens_hdr) if rem_tokens_hdr and rem_tokens_hdr.isdigit() else None
+                    reset_sec = None
+                    if reset_tokens_hdr:
+                        try:
+                            if reset_tokens_hdr.endswith("ms"):
+                                reset_sec = float(reset_tokens_hdr[:-2]) / 1000.0
+                            elif reset_tokens_hdr.endswith("s"):
+                                reset_sec = float(reset_tokens_hdr[:-1])
+                        except ValueError:
+                            pass
+
+                    self.throttle.record_usage(
+                        total_tokens=total_tokens,
+                        remaining_tokens=rem_tokens,
+                        reset_sec=reset_sec
+                    )
 
                     return GenerationResult(
                         text=patch_text,
@@ -380,7 +535,8 @@ def get_baseline_client(
     model_name: Optional[str] = None,
     api_key: Optional[str] = None,
     base_url: Optional[str] = None,
-    max_rpm: Optional[int] = None
+    max_rpm: Optional[int] = None,
+    max_tpm: Optional[int] = None
 ) -> BaseLLMBackend:
     """
     Factory creating the configured LLM backend.
@@ -399,7 +555,8 @@ def get_baseline_client(
             api_key=api_key,
             base_url=base_url,
             model_name=model_name,
-            max_rpm=max_rpm
+            max_rpm=max_rpm,
+            max_tpm=max_tpm
         )
     else:
         raise ValueError(

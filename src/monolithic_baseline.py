@@ -155,6 +155,8 @@ def run_monolithic_baseline(
             output_dir = os.path.join(BASE_DIR, "results", "prototype_run")
         else:
             output_dir = os.path.join(BASE_DIR, "results", "runs")
+    elif not os.path.isabs(output_dir):
+        output_dir = os.path.join(BASE_DIR, output_dir)
 
     os.makedirs(output_dir, exist_ok=True)
 
