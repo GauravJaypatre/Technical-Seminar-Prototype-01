@@ -2,126 +2,144 @@
 
 **Project Title:** *Benchmarking Multi-Agent Small Language Model Swarms Against Monolithic LLMs for Automated Repository Analysis*  
 **Academic Context:** Final Year Computer Engineering Technical Seminar  
-**Experimental Scope:** 18 Micro-SWE Mock Repositories $\times$ Multiple Seeds | Swarm ($n=54$ runs, 3 seeds) vs. Monolithic Frontier ($n=90$ runs, 5 seeds)
+**Experimental Scope:** 18 Curated Micro-SWE Benchmark Repositories $\times$ 5 Random Seeds ($N=90$ runs per condition) | Authentic Three-Way Benchmark: Monolithic Groq LPU (`openai/gpt-oss-120b`, $N=90$) vs. Multi-SLM Swarms (v1 Header-Only QA vs. v2 Content-Validated QA with `deepseek-coder:6.7b` + `qwen2.5:0.5b`, $N=90$ each)
 
 ---
 
 ## Executive Summary of Empirical Findings
 
-### 1. Validated Internal Swarm Finding (Core Result)
-- **Empirical Baseline:** In single-shot execution without feedback, the local SLM swarm (DeepSeek-1.3B + Qwen-1.5B) achieves a **Pass@1 resolution rate of 37.0%** (20/54 runs).
-- **Self-Correction Yield:** When equipped with execution feedback via the test-driven sandbox, the swarm reaches a final **Pass@K ($K \le 5$) resolution rate of 98.1%** (53/54 runs).
-- **Validated Finding:** Iterative self-correction improves the local SLM swarm resolution rate by **61.1 percentage points** over its own single-shot baseline ($\Delta_K = +61.1\%$). This internal empirical result is completely self-contained and validated against the corrected sandbox.
+### 1. Authentic Three-Way Cross-System Comparison Summary (Groq LPU vs. Swarm v1 vs. Swarm v2)
+*(Evaluated across all 18 Micro-SWE tasks $\times$ 5 seeds $\{42, 43, 44, 45, 46\}$, $n=30$ runs per tier, $N=90$ runs per system. Pass@1 proportions reported with 95% Wilson Score Confidence Intervals. Source: `results/prototype_run_swarm_v2_content_validated_qa/three_way_comparison_groq_v1_v2.csv`, rows 2–13).*
 
-### 2. Cross-System Comparison Summary
-*(Note: Cross-system hypothesis tests and comparative p-values against the monolithic baseline are held as provisional pending live frontier API execution; see Objective O4 below).*
+| System | Tier | N | Pass Count | Pass@1 (%) [95% Wilson CI] | Mean Latency (s) | Total Tokens | Fallback Rate (%) | QA Exhausted (%) | Mean QA Retries |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Groq Monolithic (120B)** | **Easy** | 30 | 22 | **73.33%** [55.55%, 85.82%] | 7.45s | 743.0 | 86.67% | 0.00% | 0.00 |
+| **Groq Monolithic (120B)** | **Medium** | 30 | 27 | **90.00%** [74.38%, 96.54%] | 8.59s | 901.5 | 100.00% | 0.00% | 0.00 |
+| **Groq Monolithic (120B)** | **Hard** | 30 | 28 | **93.33%** [78.68%, 98.15%] | 8.84s | 991.1 | 100.00% | 0.00% | 0.00 |
+| **Groq Monolithic (120B)** | **Overall** | **90** | **77** | **85.56%** [76.84%, 91.36%] | **8.30s** | **878.5** | **95.56%** | **0.00%** | **0.00** |
+| | | | | | | | | | |
+| **Swarm v1 (Header-Only QA)** | **Easy** | 30 | 0 | **0.00%** [0.00%, 11.35%] | 54.69s | 946.2 | 0.00% | 0.00% | 0.03 |
+| **Swarm v1 (Header-Only QA)** | **Medium** | 30 | 0 | **0.00%** [0.00%, 11.35%] | 92.90s | 1,280.2 | 0.00% | 0.00% | 0.07 |
+| **Swarm v1 (Header-Only QA)** | **Hard** | 30 | 0 | **0.00%** [0.00%, 11.35%] | 116.13s | 1,380.4 | 23.33% | 0.00% | 0.00 |
+| **Swarm v1 (Header-Only QA)** | **Overall** | **90** | **0** | **0.00%** [0.00%, 4.09%] | **87.91s** | **1,202.3** | **7.78%** | **0.00%** | **0.03** |
+| | | | | | | | | | |
+| **Swarm v2 (Content-Validated QA)** | **Easy** | 30 | 4 | **13.33%** [5.31%, 29.68%] | 104.51s | 1,461.9 | 0.00% | 70.00% | 1.50 |
+| **Swarm v2 (Content-Validated QA)** | **Medium** | 30 | 0 | **0.00%** [0.00%, 11.35%] | 193.08s | 2,108.4 | 0.00% | 96.67% | 1.93 |
+| **Swarm v2 (Content-Validated QA)** | **Hard** | 30 | 0 | **0.00%** [0.00%, 11.35%] | 184.71s | 1,812.6 | 16.67% | 56.67% | 1.13 |
+| **Swarm v2 (Content-Validated QA)** | **Overall** | **90** | **4** | **4.44%** [1.74%, 10.88%] | **160.76s** | **1,794.3** | **5.56%** | **74.44%** | **1.52** |
 
-| Metric / Evaluation Dimension | Monolithic Frontier (Claude 3.5 Sonnet) | Local SLM Swarm (DeepSeek-1.3B + Qwen-1.5B) | Empirical / Methodological Status |
-| :--- | :--- | :--- | :--- |
-| **Pass@1 Accuracy** | 58.9% *(Provisional)* | **37.0%** (20/54 runs) | Single-shot advantage belongs to frontier model ($+21.9\%$). |
-| **Final Accuracy (Pass@K, $K \le 5$)** | 58.9% *(Provisional)* | **98.1%** (53/54 runs) | Swarm achieves $+61.1\%$ internal gain across iterations. |
-| **Mean Iterations to Solve** | 1.0 (Fixed) | Easy: $1.28$, Med: $2.06$, Hard: $3.06$ | Significant difficulty scaling ($F=61.27, p<0.0001, \eta^2=0.891$). |
-| **Inference Cost per Defect** | $0.014 - $0.026 USD *(Provisional)* | $0.00026 - $0.00077 USD (Compute Proxy) | Strictly provisional; see Cost Disclosure below. |
-| **Latency per Solved Defect** | **1.4s – 1.6s** *(Provisional)* | **1.6s – 2.3s** | Comparative ratios provisional pending live data. |
+### 2. Core Takeaways
+1. **Frontier Baseline Dominance**: The cloud monolithic baseline (`openai/gpt-oss-120b` on Groq LPU) achieved an overall Pass@1 rate of **85.56% [95% Wilson CI: 76.84%, 91.36%]** with an average latency of **8.30s**, scaling effectively across difficulty tiers (73.33% Easy, 90.00% Medium, 93.33% Hard).
+2. **Context Brittleness in Swarm v1**: Swarm v1 achieved **0.00% Pass@1 [95% Wilson CI: 0.00%, 4.09%]** because its QA agent verified only unified diff headers without checking whether the hunks matched the target files, allowing subtle context-line hallucinations to fail `git apply` in the execution sandbox.
+3. **Targeted Recovery in Swarm v2**: Introducing an in-memory content-validated dry-run (`_apply_hunks_to_text`) recovered **4 successful resolutions on Easy tasks (13.33% [95% Wilson CI: 5.31%, 29.68%])**, resolving context brittleness on single-file edits.
+4. **Cognitive Reasoning Ceiling**: On Medium and Hard tasks, Swarm v2 remained at **0.00% [95% Wilson CI: 0.00%, 11.35%]** despite exhausting multi-turn QA retries (74.44% exhaustion overall, 96.67% on Medium). Multi-file dependencies and complex algorithms represent a cognitive ceiling that syntax repair feedback cannot bridge for 6.7B SLMs.
 
 ---
 
 ## Direct Alignment with Seminar Objectives (O1–O4)
 
 ### Objective O1: Infrastructure & Experimental Harness
-- Extended `reference_slm_study/benchmarking.py` to create `src/benchmarking_extended.py`, logging granular JSON and CSV records after every individual run.
+- Extended benchmarking infrastructure to log granular JSON and CSV records after every individual run (`results/prototype_run_*/`).
 - Implemented a secure, isolated execution sandbox (`src/sandbox.py`) using `tempfile.TemporaryDirectory` with process timeout enforcement ($15.0\text{s}$) and robust unified diff application.
 - **Harness Verification & Patch Integrity:** Audited and resolved diff application edge cases to ensure unapplicable patches are strictly rejected (`patch_applied = False`), preventing false-positive scoring of unpatched bugs.
 - Synthesized and verified 18 self-contained "Micro-SWE" repositories (6 Easy, 6 Medium, 6 Hard) exhibiting 100% test failures in unpatched states and 100% test passage under ground-truth patches across 36 unit tests.
 
-### Objective O2: Iteration Dynamics & RQ1 (Does Iteration Scaling Differ by Difficulty?)
-- **Methodological Guard:** All analyses were executed on **task-level aggregated means ($n=18$, with $n=6$ per tier)** to strictly prevent pseudoreplication from repeated seed observations.
-- **Descriptive Statistics:**
-  - Easy: $\mu = 1.28 \pm 0.14$ iterations (Median: 1.33, IQR: 0.00)
-  - Medium: $\mu = 2.06 \pm 0.33$ iterations (Median: 2.17, IQR: 0.58)
-  - Hard: $\mu = 3.06 \pm 0.33$ iterations (Median: 3.00, IQR: 0.00)
-- **Hypothesis Testing:**
-  - **One-Way ANOVA:** $F = 61.2698, p = 6.06 \times 10^{-8}$ (Reject $H_0$ at $\alpha = 0.01$).
-  - **Effect Size:** $\eta^2 = 0.8909$ (89.1% of total variance in iteration count is explained by task difficulty).
-  - **Tukey HSD Post-Hoc Test:**
-    - Easy vs. Hard: Mean Difference $= +1.778$ iterations ($p < 0.0001$, Significant)
-    - Easy vs. Medium: Mean Difference $= +0.778$ iterations ($p = 0.0006$, Significant)
-    - Medium vs. Hard: Mean Difference $= +1.000$ iterations ($p < 0.0001$, Significant)
-  - **Non-Parametric Robustness (Kruskal-Wallis):**
-    - $H = 15.7259, p = 0.00038, \epsilon^2 = 0.9151$ (Confirms non-parametric significance under right-censoring).
-    - Pairwise Cliff's Delta: Easy vs. Medium ($\delta = +1.000$), Easy vs. Hard ($\delta = +1.000$), Medium vs. Hard ($\delta = +1.000$).
+### Objective O2: Iteration Dynamics & QA Verifier Behavior
+*(Evaluated on live Swarm v1 and Swarm v2 execution records across 90 runs per system).*
 
-#### Distributional Sanity Check: Audit of Cliff's $\delta = +1.000$ and $\text{IQR} = 0.00$
-A panel member examining the statistical table might suspect that perfect effect sizes ($\delta = 1.000$) and zero IQRs are artifacts of integer flooring or row collisions in `analysis/anova_rq1.py`. A granular spot-check of the raw per-task data confirms these properties are mathematically genuine:
-1. **Pipeline Verification:** Confirmed that `iterations_effective` is processed as a standard 64-bit float without truncation or floor operations. All 18 task identifiers are distinct (no task collision).
-2. **Raw Per-Task Breakdown:**
-   - **Easy Tier ($n=6$):** Tasks `easy_02` through `easy_06` each passed on iteration 1 for two seeds and iteration 2 for one seed ($\mu = 4/3 \approx 1.333$), while `easy_01` passed on iteration 1 across all three seeds ($\mu = 1.000$). Ordered distribution: `[1.000, 1.333, 1.333, 1.333, 1.333, 1.333]`. Because 5 of 6 observations are identical at $1.333$, both the 25th percentile ($Q_1$) and 75th percentile ($Q_3$) land at $1.333$, resulting in $\text{IQR} = Q_3 - Q_1 = \mathbf{0.000}$.
-   - **Medium Tier ($n=6$):** Ordered distribution: `[1.667, 1.667, 2.000, 2.333, 2.333, 2.333]`. With greater spread, $Q_1 = 1.750, \text{Median} = 2.167, Q_3 = 2.333 \implies \mathbf{\text{IQR} = 0.583}$.
-   - **Hard Tier ($n=6$):** Four tasks (`hard_01`, `hard_04`, `hard_05`, `hard_06`) summed to 9 across seeds ($\mu = 3.000$), `hard_03` summed to 8 ($\mu = 2.667$), and `hard_02` summed to 11 ($\mu = 3.667$). Ordered distribution: `[2.667, 3.000, 3.000, 3.000, 3.000, 3.667]`. Because 4 of 6 observations equal $3.000$, both $Q_1$ and $Q_3$ fall at $3.000 \implies \mathbf{\text{IQR} = 0.000}$.
-3. **Zero Distributional Overlap:**
-   $$\max(\text{Easy}) = 1.333 < \min(\text{Medium}) = 1.667 < \max(\text{Medium}) = 2.333 < \min(\text{Hard}) = 2.667$$
-   Because every task in Medium required strictly more iterations than every task in Easy ($36/36$ positive differences), and every task in Hard required strictly more iterations than every task in Medium ($36/36$ positive differences), Cliff's delta is mathematically guaranteed to equal **$+1.000$**. This reflects sharp difficulty boundaries at this experimental scale.
+1. **Swarm v1 (Header-Only QA): Passive Feedback Failure**:
+   - In Swarm v1, the QA verifier checked only whether the model's output contained diff headers (`diff --git`, `--- a/`, `+++ b/`).
+   - Because the Code Analyzer almost always generated header-conformant text, the QA verifier triggered retries on only **2 out of 90 runs (mean 0.03 retries per run)**.
+   - However, because hunk context lines had subtle line-number drifts or hallucinated variable names, `git apply` failed in the sandbox, yielding 0/90 pass rate across all tiers.
+2. **Swarm v2 (Content-Validated QA): Active Iterative Reflection**:
+   - Swarm v2 implemented an in-memory structural dry-run (`_apply_hunks_to_text`), comparing the analyzer's proposed diff against the exact target file contents in the sandbox before invoking git apply.
+   - When context lines or offsets did not match, the verifier rejected the diff and fed the exact failure line number back to the Code Analyzer for a retry.
+   - This converted the QA agent into an active reflective loop:
+     - **Easy Tier:** Mean **1.50 retries per run**, with a **70.00% QA retry exhaustion rate**. This feedback loop successfully recovered **4 solves (13.33%)** on `easy_04` (seed 45) and `easy_05` (seeds 42, 44, 46).
+     - **Medium Tier:** Mean **1.93 retries per run**, with a **96.67% QA retry exhaustion rate**. Despite extensive multi-turn retries, 0/30 runs passed.
+     - **Hard Tier:** Mean **1.13 retries per run**, with a **56.67% QA retry exhaustion rate**. 0/30 runs passed.
+3. **Dynamics Takeaway**: Iterative reflection is highly effective when the failure mode is **syntactic or contextual** (aligning diff context lines with file text on Easy tasks), but degrades into repeated retry exhaustion when the underlying failure is **semantic or algorithmic** (Medium and Hard tasks).
 
 ### Objective O3: Complexity Ceiling & Economic/Latency Break-Even (RQ2)
 
-> [!WARNING]
-> **PROVISIONAL ANALYSIS (Pending Live Frontier Baseline Rerun):**  
-> All comparative metrics cited in this section and plotted in Figure 2 — including monolithic frontier cost per solve ($0.014–$0.026 USD), monolithic single-shot latency ($1.44\text{s}–1.63\text{s}$), monolithic resolution rates ($80.0\% / 53.3\% / 43.3\%$), and the derived **"34x–48x cheaper"** ratio — are drawn from the initial unverified monolithic dataset (`benchmark_monolithic_baseline_20260907_171018.csv`). Because that dataset was generated under mock simulation conditions rather than live Claude API execution, the specific numerical thresholds and break-even multipliers in this section are **strictly provisional**. They demonstrate the methodological architecture of the complexity ceiling, but cannot be treated as verified empirical facts until live API data is incorporated.
+#### Authentic Cross-System Evaluation: Groq Monolithic LPU vs. Multi-SLM Swarm
+The completed empirical benchmark compares a commercial frontier model (`openai/gpt-oss-120b` executed on Groq LPU hardware) against the local multi-agent SLM swarm (`deepseek-coder:6.7b` + `qwen2.5:0.5b` executed via local Ollama).
 
-#### Economic Break-Even & Cost Methodology Disclosure
-- **Cost Accounting Regimes:** 
-  - *Swarm Operational Compute Proxy:* Swarm inference cost is estimated using an engineering compute proxy rate of **$0.50 per 1M tokens** ($(\text{prompt tokens} + \text{completion tokens}) \times 10^{-6} \times \$0.50$), reflecting local host electricity and amortized hardware expense for quantized SLM execution.
-  - *Frontier Retail API Schedule:* Monolithic frontier costs are calculated using Anthropic's commercial retail schedule for Claude 3.5 Sonnet ($3.00/\text{M}$ input tokens, $15.00/\text{M}$ output tokens).
-  - *Disclosure:* These figures compare two fundamentally different economic frameworks: operational private compute vs. commercial SaaS retail billing. Because local SLMs incur negligible incremental financial costs per run, the **economic cost ceiling was not exceeded** across any of the tested tiers (swarm remains 34x to 55x cheaper in direct monetary outlay under current baseline data).
+#### Economic Break-Even & Cost-vs-Capability Disclosure
+- **Monetary Outlay vs. Latency Trade-Off**:
+  - The local SLM swarm incurs **$0.00 in direct cloud API billing**, operating on local host hardware without per-token SaaS invoices.
+  - However, this zero monetary outlay is paired with a substantial **~19x latency penalty**: **160.76s average wall-clock latency per run** for Swarm v2 versus **8.30s per run** for the Groq Monolithic baseline ($\Delta_{\text{lat}} = +152.47\text{s}$, Welch's $t = 21.885, p < 10^{-36}$, Cohen's $d = +3.262$).
+  - *Local Compute & Energy Disclosure*: While direct monetary billing was $0.00, local host compute and electrical power consumption (CPU/GPU wattage over a 4.0-hour 90-task sweep) were not directly metered. Therefore, "zero cloud billing" must not be conflated with zero operational expense.
+- **Frontier LPU Economic Profile**: Groq LPU inference completed 90 runs at high throughput (8.30s mean latency, consuming 878.5 total tokens/run) with high reliability, demonstrating an enterprise SaaS profile with predictable per-call token pricing.
 
 #### Latency Dynamics & Complexity Ceiling Assessment
-- **Latency Scaling:** The swarm's multi-turn reflection loop incurs a wall-clock latency of $1.62\text{s}$ (Easy), $1.89\text{s}$ (Medium), and $2.29\text{s}$ (Hard). Compared to the current provisional monolithic baseline ($1.44\text{s}–1.63\text{s}$), the swarm latency ratio is only **1.13x to 1.41x**.
-- **Complexity Ceiling Assessment:** The latency gap between systems narrowed substantially after correcting the network pre-flight delay; **no decisive latency ceiling is currently evident** across the evaluated tiers, as the swarm resolves even Hard tasks within an interactive $2.29\text{s}$ threshold. However, this comparison remains strictly provisional pending live monolithic timing.
-- **Diagnostic Traceability (Latency Drop vs. Peak RAM Stability):**
-  - In initial benchmark runs, swarm latency averaged **$20.18\text{s}$** per task. In the corrected benchmark run, swarm latency dropped to **$1.93\text{s}$** per task.
-  - Cross-referencing `peak_ram_mb` across runs shows that process memory remained stable: **$71.44\text{ MB}$ (initial run) vs $70.16\text{ MB}$ (corrected run)**.
-  - *Root Cause:* The initial pipeline attempted an unconditional HTTP connection to `http://localhost:11434` on every agent turn. On Windows, connecting to an inactive port causes an IPv6 TCP handshake hang of ~4.2s per invocation before timing out. Over a 5-turn task, this added ~21 seconds of dead network timeout. Adding a cached pre-flight ping (`_is_ollama_online()`, timeout 0.2s) eliminated the dead TCP waits while maintaining identical sandbox execution and memory footprint.
-- **Anticipated Shift in Live Frontier Rerun:** The monolithic baseline latencies cited here ($1.44\text{s}–1.63\text{s}$) are mock-generated placeholders that exhibit artificial uniformity across difficulty tiers. In live Claude 3.5 Sonnet API execution, actual network latency and token generation delays for multi-file Medium/Hard patches are expected to be higher and more variable, which may shift the latency story further toward the local swarm being comparable or faster.
+- Across all evaluated difficulty tiers, authentic empirical execution with a 6.7B parameter local model executing a multi-turn QA loop on CPU demonstrates a substantial wall-clock latency disparity compared to LPU execution:
+  - **Easy tier:** $104.51\text{s}$ (Swarm v2) vs $7.45\text{s}$ (Groq) — **14.0x slower**.
+  - **Medium tier:** $193.08\text{s}$ (Swarm v2) vs $8.59\text{s}$ (Groq) — **22.5x slower**.
+  - **Hard tier:** $184.71\text{s}$ (Swarm v2) vs $8.84\text{s}$ (Groq) — **20.9x slower**.
+- **Operational Complexity Ceiling**: A clear operational ceiling emerges. As task complexity scales to Medium and Hard, Swarm v2 latency expands to over 3 minutes per defect attempt, driven by repeated QA retries (averaging 1.93 retries on Medium with 96.67% exhaustion) without yielding successful patch resolutions.
 
 ### Objective O4: Accuracy Parity & Statistical Hypothesis Testing (RQ3)
 
-#### Validated Internal Finding
-- The local SLM swarm demonstrates that multi-turn iterative feedback bridges the reasoning gap of small models:
-  - **Easy:** Swarm achieves $100\%$ Pass@K ($K \le 5$).
-  - **Medium:** Swarm achieves $100\%$ Pass@K ($K \le 5$).
-  - **Hard:** Swarm achieves $94.4\%$ Pass@K ($K \le 5$).
-  - **Overall:** Swarm advances from **$37.0\%$ Pass@1 to $98.1\%$ Pass@K** ($\Delta_K = +61.1\%$).
+#### Authentic Pairwise Statistical Comparison: Swarm v2 vs. Groq Monolithic LPU
+*(Source: `results/prototype_run_swarm_v2_content_validated_qa/swarm_v2_vs_groq_comparison_v2_stats.csv`, rows 2–5).*
 
-#### Cross-System Comparison & McNemar Resolution Rule
-- **Resolution Operationalization:** In `analysis/hypothesis_test_rq3.py`, task resolution across repeated seeds is evaluated using a **Majority-Vote Rule** ($\ge 50\%$ pass rate across seeds: $\ge 2/3$ for swarm, $\ge 3/5$ for monolithic).
-- **Sensitivity to Aggregation Rule:**
-  - Under the *Majority Rule*, the swarm resolved 18/18 tasks while the baseline resolved 10/18 (Exact McNemar $p = 0.0078$).
-  - Under an *Any-Seed Rule* ($>0$ seeds passing), both systems solved 18/18 tasks in at least one seed (Exact McNemar $p = 1.000$).
-- **Methodological Status:** The cross-system comparison statistics (paired $t=8.307$, McNemar $p=0.0078$) are flagged as provisional pending live frontier API execution. The validated empirical claim for RQ3 is strictly the swarm's internal $+61.1\%$ self-correction gain over its own single-shot baseline.
+To evaluate binary Pass@1 outcomes under small sample sizes ($n=30$ per tier) and zero-count cells (Medium and Hard v2 = 0/30), statistical significance was computed using proportion-appropriate methods: **Fisher's exact test** (primary), **two-proportion $z$-test** (secondary check), and **Wilson score confidence intervals**. Effect size for accuracy is represented via **Risk Difference** ($\Delta = p_{\text{v2}} - p_{\text{Groq}}$ with 95% Newcombe Hybrid Score CI) and **Fisher Odds Ratio** (reporting both raw and Haldane-Anscombe corrected ratios), while continuous **Cohen's $d$** is retained exclusively for wall-clock latency:
 
-### Router Ablation Insight (Easy Tier)
+| Tier | Groq N | Swarm v2 N | Groq Pass@1 (%) [95% Wilson CI] | Swarm v2 Pass@1 (%) [95% Wilson CI] | Risk Difference (% pts) [95% Newcombe CI] | Fisher OR (Raw) | Fisher OR (HA Corrected) | Fisher $p$-value (Acc) | Two-Prop $z$-stat | Two-Prop $p$-value (Acc) | Delta Latency (s) | Cohen's $d$ (Lat) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Easy** | 30 | 30 | 73.33% [55.55%, 85.82%] | **13.33%** [5.31%, 29.68%] | **-60.00%** [-74.84%, -35.85%] | 0.0559 | 0.0642 | $4.83 \times 10^{-6}$ | -4.689 | $2.74 \times 10^{-6}$ | +97.06s | +3.600 |
+| **Medium** | 30 | 30 | 90.00% [74.38%, 96.54%] | **0.00%** [0.00%, 11.35%] | **-90.00%** [-96.54%, -70.69%] | 0.0000* | **0.0021** | $9.23 \times 10^{-14}$ | -7.006 | $2.44 \times 10^{-12}$ | +184.49s | +5.139 |
+| **Hard** | 30 | 30 | 93.33% [78.68%, 98.15%] | **0.00%** [0.00%, 11.35%] | **-93.33%** [-98.15%, -74.79%] | 0.0000* | **0.0014** | $8.39 \times 10^{-15}$ | -7.246 | $4.30 \times 10^{-13}$ | +175.86s | +3.738 |
+| **Overall** | **90** | **90** | **85.56%** [76.84%, 91.36%] | **4.44%** [1.74%, 10.88%] | **-81.11%** [-87.51%, -70.28%] | **0.0079** | **0.0091** | **$2.28 \times 10^{-31}$** | **-10.937** | **$7.67 \times 10^{-28}$** | **+152.47s** | **+3.262** |
 
-| Evaluation Condition | Mean Iterations | Mean Latency (s) | Mean Completion Tokens | Wilcoxon Statistic ($W$) | Wilcoxon $p$-value | Empirical Conclusion |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Swarm-Full (Router Active)** | **1.28** | 1.62s | 121.2 tokens | **Degenerate ($W=0$)** | **N/A (Identical)** | Routing overhead unnecessary |
-| **Swarm-NoRouter (Direct Pass)** | **1.28** | **1.53s** | **95.5 tokens** | **Degenerate ($W=0$)** | **N/A (Identical)** | **Saves 25.7 tokens/run** |
+> [!NOTE]
+> **Haldane-Anscombe Correction for Zero-Count Cells**:  
+> In $2 \times 2$ contingency tables where an outcome cell contains zero observations (specifically, Swarm v2's 0/30 successes on Medium and Hard tiers), the raw sample odds ratio $\frac{a \cdot d}{b \cdot c}$ degenerates to 0.0000. To resolve this degeneracy, a standard **Haldane-Anscombe correction** was applied by adding $0.5$ to all four table cells ($\tilde{a} = a + 0.5, \tilde{b} = b + 0.5, \tilde{c} = c + 0.5, \tilde{d} = d + 0.5$). This yields well-defined, non-degenerate finite odds ratios of **0.0021** on Medium and **0.0014** on Hard, confirming that the odds of defect resolution under Swarm v2 are approximately 0.21% and 0.14% of the odds under the Groq monolithic baseline.
+>
+> *(Supplementary Reference: Welch's $t$-test on Pass@1 as an uncorrected linear proxy yields Overall $t = -18.778, p < 10^{-39}$; Easy $t = -5.793, p < 10^{-6}$; Medium $t = -16.155, p < 10^{-15}$; Hard $t = -20.149, p < 10^{-17}$, consistent with the exact non-parametric tests).*
 
-#### Critical Finding: Disappearance of the Router "Advantage"
-1. **Mathematical Degeneracy of the Wilcoxon Test:** Across all 6 Easy-tier tasks and across all 3 seeds, the iteration counts to resolution were identical between Swarm-Full and Swarm-NoRouter ($d_i = \text{Full}_i - \text{NoRouter}_i = 0.000$ for all $i \in \{1..6\}$). Because the Wilcoxon signed-rank test discards zero differences by design (`zero_method='wilcox'`), the number of non-zero ranks is zero ($n=0$), rendering the test statistic and $p$-value strictly degenerate.
-2. **Harness Artifact Diagnosis:** In the previous round, Router-ON appeared to hold a minor numerical advantage ($1.44$ vs $1.72$ iterations, $p=0.3125$). That advantage came from the uncorrected sandbox, where unapplicable diffs were occasionally misclassified due to path prefix discrepancies. Once the sandbox was fixed to strictly reject unapplied patches (`patch_applied = False`), the router's iteration advantage evaporated completely.
-3. **Scientific Implication:** On simple, single-file tasks, top-level routing provides **zero iteration advantage** (identical at 1.28 mean iterations) while imposing **25.7 tokens of completion overhead** and **0.09s** dispatch latency. This corrected finding **supersedes** the earlier provisional reading rather than sitting alongside it. A hybrid routing architecture is therefore recommended: bypass routing for trivial single-file edits, and reserve multi-agent routing for multi-file repositories where fault localization is non-trivial.
+#### Calibrated Research Insights & Mechanistic Findings
+1. **Easy-Tier Recovery and Wilson Score Confidence Interval Interpretation**:
+   * On the Easy tier, Swarm v2 achieved a Pass@1 resolution rate of **13.33% [95% Wilson CI: 5.31%, 29.68%]**, resting on exactly **4 successes out of 30 runs** (tasks `easy_04` and `easy_05`).
+   * *Methodological Sensitivity Note*: Because this estimate rests on 4 successful runs across $n=30$, a single-task outcome shift changes the point estimate by several percentage points. The wide confidence interval ($5.31\%$ to $29.68\%$) underscores that this recovery must be interpreted with caution as an exploratory finding rather than a definitive capability plateau.
+2. **Mechanistic Separation: Context-Anchoring Brittleness vs. Cognitive Reasoning Ceilings**:
+   * In Swarm v1 (Header-Only QA), the verifier evaluated only diff headers and target file presence, allowing subtle context line hallucinations and line offset drifts to slip through and fail sandbox diff application (0.00% Pass@1).
+   * In Swarm v2 (Content-Validated QA), adding an in-memory structural dry-run (`_apply_hunks_to_text`) with line-accurate error feedback provided actionable critique to the Analyzer. This recovered 4/30 solves on Easy tasks, providing clear evidence that **context-anchoring brittleness** was the primary failure mode on simple, single-file defects.
+   * On **Medium and Hard tiers**, however, Swarm v2 remained at **0.00%** (0/30 on Medium, 0/30 on Hard) despite 137 triggered QA retries and a **74.44% overall QA retry-exhaustion rate** (reaching 96.67% on Medium).
+   * *Calibrated Causal Claim*: This empirical divergence is consistent with, and provides strong evidence for, a **cognitive reasoning capability gap** beyond what mechanical diff-repair can fix. Specifically, for this model pairing (`deepseek-coder:6.7b` + `qwen2.5:0.5b`) on the 18-task Micro-SWE suite ($n=30$ per tier), multi-file dependency tracking and algorithmic invariant synthesis require cognitive depth that small quantized models cannot overcome through diff syntax correction alone. We hedge this finding as an empirical observation scoped to this specific architecture, rather than a general claim about all SLM swarms or 6.7B models broadly.
+
+---
+
+## Methodological Integrity & Quarantine Disclosure
+
+### Phase 1 Offline Simulation Bug & Artifact Quarantine
+
+During the initial repository commit (`54dbfef`, 2026-09-08), early scaffold test runs were checked in under `results/runs/benchmark_*_20260907_*.json`. Forensic audit revealed that when Ollama was unavailable, the code fell back to an internal simulation function (`_analyze_offline` in `src/code_analyzer.py`) that rolled pseudo-random numbers against hardcoded probability arrays and directly injected `TASK_METADATA[task_id]["ground_truth_patch"]` on "success".
+
+**Remediation & Quarantine Protocol**:
+1. All 22 files in `results/runs/` dated 2026-09-07 and downstream tables in `results/tables/` are permanently quarantined.
+2. They are preserved in `results/runs/README.md` strictly as forensic artifacts documenting the simulation bug for the paper's methodology and limitations sections.
+3. An automated pre-commit audit tool (`analysis/verify_documentation_claims.py`) was introduced to enforce:
+   - Authenticity gates (rejecting sub-2s CPU runs, canned template diffs, and zero-token logs).
+   - Forbidden claim filtering (blocking references to the synthetic simulation numbers).
+   - Claim-to-artifact matching (verifying every reported percentage against verified CSV records).
+4. All empirical conclusions of this technical seminar rest solely on the verified live execution sweeps in `results/prototype_run_*/`.
 
 ---
 
 ## Generated Artifacts & Replication Files
 
-1. **Master Results Workbook:** `results/tables/Results.xlsx` (Sheets: `RQ1_Iterations`, `RQ2_Complexity_Ceiling`, `RQ3_Accuracy`, `Per_Task_Breakdown`, `Router_Ablation`).
-2. **Granular Per-Task Data:** `results/tables/per_task_results.csv`.
-3. **Statistical Test Summaries:**
-   - `results/tables/rq1_anova_summary.csv`
-   - `results/tables/rq2_complexity_ceiling.csv`
-   - `results/tables/rq3_hypothesis_test.csv`
-   - `results/tables/router_ablation_summary.csv`
-4. **Publication-Ready Figures:**
-   - `results/figures/fig1_iteration_curve.png` and `.pdf`
-   - `results/figures/fig2_complexity_ceiling.png` and `.pdf`
+1. **Master Statistical Comparison Files**:
+   - `results/prototype_run_swarm_v2_content_validated_qa/swarm_v2_vs_groq_comparison_v2_stats.csv` *(Proportion-appropriate inference: Fisher exact test, two-proportion $z$-test, Wilson score CIs, Risk Difference with Newcombe CIs, Haldane-Anscombe ORs, continuous latency Cohen's $d$)*.
+   - `results/prototype_run_swarm_v2_content_validated_qa/three_way_comparison_groq_v1_v2.csv` *(Consolidated 3-way benchmark comparison with Wilson score 95% CIs)*.
+   - `results/prototype_run_swarm_v2_content_validated_qa/swarm_v2_vs_groq_comparison.csv` *(Original comparison file preserved for reference)*.
+2. **Run Workbooks & Granular Execution Logs**:
+   - `results/prototype_run_groq/Prototype_Results_Groq.xlsx` & `benchmark_prototype_monolithic_groq_20260909_164450.csv` *(Groq Monolithic baseline, N=90)*.
+   - `results/prototype_run_swarm_v1_header_only_qa/benchmark_prototype_swarm_20260909_175738.csv` *(Swarm v1 baseline, N=90)*.
+   - `results/prototype_run_swarm_v2_content_validated_qa/Prototype_Results_Swarm.xlsx` & `benchmark_prototype_swarm_20260909_204053.csv` *(Swarm v2 baseline, N=90)*.
+3. **Quarantined Phase 1 Simulation Scaffold**:
+   - `results/runs/README.md` *(Forensic documentation and quarantine manifest for 2026-09-07 scaffold runs)*.
+4. **Automated Verification & Integrity Scripts**:
+   - `analysis/verify_documentation_claims.py` *(Pre-commit claim-to-artifact verification tool)*.
+   - `analysis/compare_swarm_vs_monolithic.py` *(Statistical test reproduction script)*.

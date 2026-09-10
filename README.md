@@ -8,88 +8,137 @@
 
 ## 📌 Executive Summary
 
-This research benchmarks an autonomous, local swarm of quantized **Small Language Models (SLMs)**—orchestrated via a sequential multi-agent architecture—against a **monolithic frontier LLM (Claude 3.5 Sonnet)** for automated repository-level defect resolution.
+This research investigates whether an autonomous, local multi-agent swarm of quantized **Small Language Models (SLMs)**—orchestrated sequentially with iterative feedback—can achieve defect resolution parity with a **monolithic frontier LLM baseline (`openai/gpt-oss-120b` executed on Groq LPU hardware)** on repository-level code repair.
 
-Using a curated suite of **18 self-contained "Micro-SWE" benchmark repositories** spanning three difficulty tiers (Easy, Medium, Hard), we evaluate:
-1. **Iteration Dynamics (RQ1):** How test-driven self-correction iteration counts scale as task complexity increases.
-2. **Complexity Ceiling & Economics (RQ2):** The economic break-even and latency boundary where multi-agent reflection stops being cost-effective compared to single-shot frontier inference.
-3. **Reasoning Parity via Self-Correction (RQ3):** Whether multi-turn execution feedback allows small models (1.3B–1.5B parameters) to match or exceed frontier LLMs in real bug-fixing accuracy.
-4. **Router Agent Ablation:** Whether top-level architectural routing adds value on simple single-file repairs or merely introduces latency and token overhead.
+Using a curated suite of **18 self-contained "Micro-SWE" benchmark repositories** spanning three difficulty tiers (Easy, Medium, Hard) across 5 random seeds ($N=90$ runs per system), we evaluate:
+1. **Defect Resolution Accuracy (Pass@1):** Real patch synthesis and test passage across Easy, Medium, and Hard repository defects under isolated execution.
+2. **Mechanistic Failure Modes:** The root causes of SLM repair failures, separating context-anchoring and git apply brittleness from cognitive reasoning ceilings on multi-file state.
+3. **Execution Latency & Operational Economics:** The wall-clock execution time and token consumption trade-offs between local SLM multi-turn execution and high-throughput cloud LPU inference.
 
 ---
 
 ## 🏗️ System Architecture
 
-The local SLM swarm pipeline operates entirely on commodity hardware (16 GB RAM) through sequential multi-agent execution with model offloading (`keep_alive: 0`):
+The local SLM swarm pipeline operates on commodity hardware through sequential multi-agent execution with model offloading (`keep_alive: 0`):
 
 ```
-                       +---------------------------------------+
-                       |              Task Issue               |
-                       |       (Repository & Test Suite)       |
-                       +---------------------------------------+
-                                           |
-                                           v
-                       +---------------------------------------+
-                       |             Router Agent              |
-                       |    (Qwen2.5-Coder:1.5B-Instruct)      |
-                       |  - Fault localization & strategy      |
-                       +---------------------------------------+
-                                           |
-                                           v
-                       +---------------------------------------+
-                       |          Code Analyzer Agent          |
-                       |   (DeepSeek-Coder:1.3B-Instruct)      |
-                       |  - Generates unified diff patch       |
-                       +---------------------------------------+
-                                           |
-                                           v
-                       +---------------------------------------+
-                       |         Test-Driven Sandbox           |
-                       |  - Ephemeral directory replication    |
-                       |  - Strict unified diff verification   |
-                       |  - Isolated pytest execution (15s TO) |
-                       +---------------------------------------+
-                                 /                   \
-                       [Tests Pass]                 [Tests Fail]
-                            |                             |
-                            v                             v
-                       +----------+        +-------------------------------+
-                       | Success  |        |       QA Verifier Agent       |
-                       | (Exit)   |        | (Qwen2.5-Coder:1.5B-Instruct) |
-                       +----------+        | - Analyzes pytest traceback   |
-                                           | - Formulates targeted advice  |
-                                           +-------------------------------+
-                                                          |
-                                                          +---> [Loop back to Analyzer, K <= 5]
+                       +---------------------------------------------+
+                       |                 Task Issue                  |
+                       |          (Repository & Test Suite)          |
+                       +---------------------------------------------+
+                                              |
+                                              v
+                       +---------------------------------------------+
+                       |                Router Node                  |
+                       |         (Deterministic Heuristics)          |
+                       |  - Zero LLM calls, zero token cost          |
+                       |  - Direct vs. decomposed routing strategy   |
+                       +---------------------------------------------+
+                                              |
+                                              v
+                       +---------------------------------------------+
+                       |             Code Analyzer Node              |
+                       |            (deepseek-coder:6.7b)            |
+                       |  - Ingests repository files & issue text    |
+                       |  - Generates unified diff patch             |
+                       +---------------------------------------------+
+                                              |
+                                              v
+                       +---------------------------------------------+
+                       |              QA Verifier Node               |
+                       |               (qwen2.5:0.5b)                |
+                       |  - In-memory structural dry-run             |
+                       |  - Validates headers, hunks, context lines  |
+                       |  - Inspects file existence & line offsets   |
+                       +---------------------------------------------+
+                                      /              \
+                          [Patch Valid]              [Patch Malformed]
+                                |                             |
+                                |                  +-------------------------+
+                                |                  | Conditional Retry Check |
+                                |                  |    (retry_count < 2)    |
+                                |                  +-------------------------+
+                                |                     /                   \
+                                |              [Under Cap]             [Exhausted]
+                                |                   |                       |
+                                |                   v                       |
+                                |       +-----------------------+           |
+                                |       | Loop back to Analyzer |           |
+                                |       | with exact line-level |           |
+                                |       | rejection critique    |           |
+                                |       +-----------------------+           |
+                                |                                           |
+                                +---------------------+---------------------+
+                                                      |
+                                                      v
+                                       +-----------------------------+
+                                       |     Test-Driven Sandbox     |
+                                       |      (src/sandbox.py)       |
+                                       |  - Ephemeral directory clone|
+                                       |  - Strict git apply patch   |
+                                       |  - Isolated pytest (15s TO) |
+                                       +-----------------------------+
+                                                /           \
+                                      [Tests Pass]         [Tests Fail]
+                                           |                     |
+                                           v                     v
+                                    [Task Resolved]       [Task Unresolved]
 ```
 
 ---
 
 ## 📊 Core Empirical Findings
 
-### 1. Validated Internal Swarm Finding (Core Result)
-- **Single-Shot Pass@1:** The local SLM swarm achieves a **37.0% Pass@1 resolution rate** (20/54 runs) without feedback.
-- **Iterative Pass@K ($K \le 5$):** With test-driven execution feedback, the swarm reaches a final **Pass@K resolution rate of 98.1%** (53/54 runs).
-- **Self-Correction Yield:** Multi-turn reflection provides a **+61.1 percentage point gain** ($\Delta_K = +61.1\%$), proving that iterative execution feedback bridges the reasoning gap of small quantized models.
+### 1. Authentic Three-Way Cross-System Comparison
 
-### 2. Iteration Scaling by Difficulty Tier (RQ1)
-- Evaluated on **task-level aggregated means ($n=18$, with $n=6$ per tier)** to strictly prevent pseudoreplication across repeated random seeds ($S \in \{42, 43, 44\}$):
-  - **Easy:** $\mu = 1.28 \pm 0.14$ iterations (Median: 1.33, IQR: 0.00)
-  - **Medium:** $\mu = 2.06 \pm 0.33$ iterations (Median: 2.17, IQR: 0.58)
-  - **Hard:** $\mu = 3.06 \pm 0.33$ iterations (Median: 3.00, IQR: 0.00)
-- **One-Way ANOVA:** $F = 61.27, p = 6.06 \times 10^{-8}, \eta^2 = 0.8909$ (89.1% of iteration variance is explained by difficulty).
-- **Tukey HSD Post-Hoc:** All pairwise differences are statistically significant ($p < 0.001$).
-- **Non-Parametric Robustness:** Kruskal-Wallis $H = 15.73, p = 0.00038, \epsilon^2 = 0.9151$. Pairwise Cliff's Delta equals $+1.000$ across all pairs due to strict non-overlapping separation:
-  $$\max(\text{Easy}) = 1.333 < \min(\text{Medium}) = 1.667 < \max(\text{Medium}) = 2.333 < \min(\text{Hard}) = 2.667$$
+Evaluated across all 18 Micro-SWE tasks $\times$ 5 random seeds $\{42, 43, 44, 45, 46\}$ ($n=30$ runs per tier, $N=90$ runs per system). Proportions are reported with **95% Wilson Score Confidence Intervals**:
 
-### 3. Router Agent Ablation (Easy Tier)
-- On single-file Easy tasks, both **Full Swarm (Router Active)** and **Swarm-NoRouter (Direct Pass)** tied at **1.28 mean iterations**.
-- **Degenerate Wilcoxon Test:** Across all 6 tasks and 3 seeds, iteration counts were identical ($d_i = 0$), rendering the Wilcoxon signed-rank test degenerate ($W = 0, p = \text{N/A}$).
-- **Efficiency Finding:** Bypassing the router saved **25.7 completion tokens per run** ($95.5$ vs $121.2$ tokens) and **0.09s** dispatch latency, demonstrating that top-level routing should be bypassed for trivial single-file edits.
+| System | Tier | N | Pass Count | Pass@1 (%) [95% Wilson CI] | Mean Latency (s) | Total Tokens | Fallback Rate (%) | QA Exhausted (%) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Groq Monolithic (120B)** | Easy | 30 | 22 | **73.33%** [55.55%, 85.82%] | 7.45s | 743.0 | 86.67% | 0.00% |
+| **Groq Monolithic (120B)** | Medium | 30 | 27 | **90.00%** [74.38%, 96.54%] | 8.59s | 901.5 | 100.00% | 0.00% |
+| **Groq Monolithic (120B)** | Hard | 30 | 28 | **93.33%** [78.68%, 98.15%] | 8.84s | 991.1 | 100.00% | 0.00% |
+| **Groq Monolithic (120B)** | **Overall** | **90** | **77** | **85.56%** [76.84%, 91.36%] | **8.30s** | **878.5** | **95.56%** | **0.00%** |
+| | | | | | | | | |
+| **Swarm v1 (Header-Only QA)** | Easy | 30 | 0 | **0.00%** [0.00%, 11.35%] | 54.69s | 946.2 | 0.00% | 0.00% |
+| **Swarm v1 (Header-Only QA)** | Medium | 30 | 0 | **0.00%** [0.00%, 11.35%] | 92.90s | 1,280.2 | 0.00% | 0.00% |
+| **Swarm v1 (Header-Only QA)** | Hard | 30 | 0 | **0.00%** [0.00%, 11.35%] | 116.13s | 1,380.4 | 23.33% | 0.00% |
+| **Swarm v1 (Header-Only QA)** | **Overall** | **90** | **0** | **0.00%** [0.00%, 4.09%] | **87.91s** | **1,202.3** | **7.78%** | **0.00%** |
+| | | | | | | | | |
+| **Swarm v2 (Content-Validated QA)** | Easy | 30 | 4 | **13.33%** [5.31%, 29.68%] | 104.51s | 1,461.9 | 0.00% | 70.00% |
+| **Swarm v2 (Content-Validated QA)** | Medium | 30 | 0 | **0.00%** [0.00%, 11.35%] | 193.08s | 2,108.4 | 0.00% | 96.67% |
+| **Swarm v2 (Content-Validated QA)** | Hard | 30 | 0 | **0.00%** [0.00%, 11.35%] | 184.71s | 1,812.6 | 16.67% | 56.67% |
+| **Swarm v2 (Content-Validated QA)** | **Overall** | **90** | **4** | **4.44%** [1.74%, 10.88%] | **160.76s** | **1,794.3** | **5.56%** | **74.44%** |
 
-### 4. Complexity Ceiling & Economic Break-Even (RQ2)
-- **Inference Cost:** Under an operational private compute proxy ($0.50 per 1M tokens), the swarm cost remains $34\times–55\times$ cheaper than commercial frontier SaaS retail pricing.
-- **Latency Ratio:** Swarm wall-clock execution ($1.62\text{s}$ Easy, $1.89\text{s}$ Medium, $2.29\text{s}$ Hard) maintains a narrow $1.13\times–1.41\times$ ratio against monolithic baselines, indicating no decisive latency ceiling for interactive developer workflows.
+*(Source: `results/prototype_run_swarm_v2_content_validated_qa/three_way_comparison_groq_v1_v2.csv`, rows 2–13).*
+
+---
+
+### 2. Proportion-Appropriate Statistical Hypothesis Testing
+
+Because Pass@1 outcomes are binary and small sample sizes ($n=30$ per tier) contain zero-count cells (Swarm v2 Medium and Hard = 0/30), statistical significance is evaluated using exact and proportion-appropriate tests:
+
+| Tier | Groq Pass@1 (%) | Swarm v2 Pass@1 (%) | Risk Difference (% pts) [95% Newcombe CI] | Fisher Odds Ratio (Raw) | Fisher Odds Ratio (HA Corrected) | Fisher $p$-value | Two-Prop $z$-stat | Two-Prop $p$-value | Delta Latency (s) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Easy** | 73.33% | **13.33%** | **-60.00%** [-74.84%, -35.85%] | 0.0559 | 0.0642 | $4.83 \times 10^{-6}$ | -4.689 | $2.74 \times 10^{-6}$ | +97.06s |
+| **Medium** | 90.00% | **0.00%** | **-90.00%** [-96.54%, -70.69%] | 0.0000* | **0.0021** | $9.23 \times 10^{-14}$ | -7.006 | $2.44 \times 10^{-12}$ | +184.49s |
+| **Hard** | 93.33% | **0.00%** | **-93.33%** [-98.15%, -74.79%] | 0.0000* | **0.0014** | $8.39 \times 10^{-15}$ | -7.246 | $4.30 \times 10^{-13}$ | +175.86s |
+| **Overall** | **85.56%** | **4.44%** | **-81.11%** [-87.51%, -70.28%] | **0.0079** | **0.0091** | **$2.28 \times 10^{-31}$** | **-10.937** | **$7.67 \times 10^{-28}$** | **+152.47s** |
+
+*(Source: `results/prototype_run_swarm_v2_content_validated_qa/swarm_v2_vs_groq_comparison_v2_stats.csv`, rows 2–5).*
+
+* **Haldane-Anscombe Odds Ratio Correction:** Where zero cells exist (Medium and Hard tiers), adding 0.5 to all contingency cells resolves sample odds ratio degeneracy, yielding finite odds ratios of **0.0021** (Medium) and **0.0014** (Hard).
+* **Easy-Tier Recovery:** In-memory structural dry-run validation in Swarm v2 recovered **4/30 solves on Easy** (13.33% [95% Wilson CI: 5.31%, 29.68%]), demonstrating that diff syntax and context-anchoring brittleness were the primary failure modes on simple single-file edits.
+* **Cognitive Reasoning Ceiling:** On Medium and Hard tiers, Swarm v2 remained at **0.00%** despite 137 triggered QA retries and a **74.44% QA exhaustion rate** (reaching 96.67% on Medium). Multi-file dependencies and state invariant reasoning represent a cognitive ceiling that diff syntax repair cannot overcome for 6.7B SLMs.
+* **Latency Disparity:** Swarm v2 averaged **160.76s** wall-clock execution per run on commodity CPU vs. **8.30s** for the Groq Monolithic baseline (~19x latency penalty).
+
+---
+
+### 3. Quarantine Notice: Phase 1 Offline Simulation Scaffold
+
+> [!CAUTION]
+> Early repository scaffold files (`results/runs/benchmark_*_20260907_*.json` and `.csv`) were generated by an **offline Monte Carlo probabilistic fallback simulator** (`_analyze_offline` in `src/code_analyzer.py`), NOT by live neural inference.
+> All such files and their downstream summary tables in `results/tables/` are permanently quarantined in [`results/runs/README.md`](file:///c:/Users/HP/OneDrive/المستندات/Technical%20Seminar%20Prototype%2001/results/runs/README.md). They are preserved strictly as forensic documentation of the offline simulation bug for the paper's methodology section. All empirical findings presented in this research rest solely on the verified live execution sweeps in `results/prototype_run_*/`.
 
 ---
 
@@ -97,52 +146,57 @@ The local SLM swarm pipeline operates entirely on commodity hardware (16 GB RAM)
 
 ```
 .
-├── analysis/                     # Statistical analysis and figure generation scripts
-│   ├── anova_rq1.py              # One-Way ANOVA, Kruskal-Wallis, Tukey HSD, Cliff's Delta
-│   ├── complexity_ceiling_rq2.py # Cost and latency break-even analysis
-│   ├── hypothesis_test_rq3.py    # McNemar test & paired t-test
-│   ├── router_ablation.py        # Easy-tier router ablation analysis
-│   ├── plot_curves.py            # Generates Figure 1 and Figure 2
-│   └── export_master_results.py  # Exports multi-sheet Results.xlsx and per_task_results.csv
+├── analysis/                                          # Statistical analysis and claim verification scripts
+│   ├── compare_swarm_vs_monolithic.py                 # Primary statistical comparator (Fisher, Wilson CIs, HA OR)
+│   ├── export_master_results.py                       # Excel export utility for benchmark runs
+│   ├── export_prototype_results.py                    # Formats Groq prototype runs into Excel workbook
+│   ├── export_swarm_results.py                        # Formats Swarm prototype runs into Excel workbook
+│   └── verify_documentation_claims.py                 # Pre-commit automated claim-to-artifact audit tool
 ├── data/
-│   ├── mock_repos/               # 18 curated Micro-SWE benchmark repositories
-│   │   ├── easy_01 ... easy_06   # Single-file logic, validation, edge cases
-│   │   ├── med_01 ... med_06     # State machines, caching, concurrent buffers
-│   │   └── hard_01 ... hard_06   # Parsers, compilers, expression evaluators
-│   └── task_manifest.json        # Benchmark registry with metadata & ground truths
+│   ├── mock_repos/                                    # 18 curated Micro-SWE benchmark repositories
+│   │   ├── easy_01 ... easy_06                        # Single-file logic, validation, edge cases
+│   │   ├── med_01 ... med_06                          # State machines, caching, concurrent buffers
+│   │   └── hard_01 ... hard_06                        # Parsers, compilers, expression evaluators
+│   └── task_manifest.json                             # Benchmark registry with metadata & ground truths
 ├── results/
-│   ├── figures/                  # Publication-ready plots (PDF & PNG)
-│   │   ├── fig1_iteration_curve.pdf / .png
-│   │   └── fig2_complexity_ceiling.pdf / .png
-│   ├── tables/                   # Statistical summary CSVs & master Excel workbook
-│   │   ├── Results.xlsx          # 5-sheet master workbook
-│   │   ├── per_task_results.csv
-│   │   ├── rq1_anova_summary.csv
-│   │   ├── rq2_complexity_ceiling.csv
-│   │   ├── rq3_hypothesis_test.csv
-│   │   └── router_ablation_summary.csv
-│   ├── runs/                     # Granular JSON and CSV logs for all experimental sweeps
-│   └── SEMINAR_SYNTHESIS.md      # Comprehensive technical seminar report
-├── scripts/
-│   ├── audit_failures.py         # Automated failure diagnostic tool
-│   └── test_harness_cases.py     # Rigorous test suite for diff and sandbox edge cases
+│   ├── prototype_run_groq/                            # Monolithic baseline runs (openai/gpt-oss-120b, N=90)
+│   │   ├── benchmark_prototype_monolithic_groq_*.csv  # Raw per-run execution logs
+│   │   └── Prototype_Results_Groq.xlsx                # Verified per-tier results workbook
+│   ├── prototype_run_swarm_v1_header_only_qa/         # Swarm v1 runs (Header-Only QA, N=90)
+│   │   └── benchmark_prototype_swarm_*.csv            # Raw per-run execution logs (0.00% Pass@1)
+│   ├── prototype_run_swarm_v2_content_validated_qa/   # Swarm v2 runs (Content-Validated QA, N=90)
+│   │   ├── three_way_comparison_groq_v1_v2.csv        # Consolidated 3-way benchmark comparison
+│   │   ├── swarm_v2_vs_groq_comparison_v2_stats.csv   # Proportion-appropriate statistical test results
+│   │   └── Prototype_Results_Swarm.xlsx               # Verified per-tier results workbook
+│   ├── runs/                                          # QUARANTINED: Phase 1 offline simulation scaffold files
+│   │   └── README.md                                  # Forensic documentation and quarantine manifest
+│   ├── tables/                                        # Quarantined Phase 1 summary tables
+│   └── SEMINAR_SYNTHESIS.md                           # Comprehensive technical seminar report
 ├── src/
-│   ├── benchmarking_extended.py  # Core logging & resource monitoring infrastructure
-│   ├── code_analyzer.py          # Code Analyzer agent (DeepSeek-Coder)
-│   ├── monolithic_baseline.py    # Monolithic frontier baseline (Claude 3.5 Sonnet)
-│   ├── qa_verifier.py            # QA Verifier agent (Qwen2.5-Coder)
-│   ├── router.py                 # Router agent (Qwen2.5-Coder)
-│   ├── sandbox.py                # Isolated execution sandbox with diff engine
-│   └── swarm_pipeline.py         # Multi-turn sequential swarm orchestrator
+│   ├── baseline_client.py                             # Provider client library (Groq API, rate limiting, token counting)
+│   ├── monolithic_baseline.py                         # Live Groq monolithic benchmark harness (produces results/prototype_run_groq/; fallback neutralized)
+│   ├── benchmarking_extended.py                       # Checkpointing logger and resource monitor
+│   ├── sandbox.py                                     # Isolated execution sandbox with strict diff validation
+│   ├── swarm/                                         # LangGraph Multi-SLM Swarm implementation
+│   │   ├── agents.py                                  # RouterAgent (heuristic), CodeAnalyzerAgent, QAVerifierAgent
+│   │   ├── graph.py                                   # LangGraph StateGraph workflow (retry loop <= 2)
+│   │   └── swarm_runner.py                            # Benchmark execution runner for Swarm pipeline
+│   ├── code_analyzer.py                               # (Phase 1 legacy scaffold - superseded by src/swarm/agents.py; fallback neutralized)
+│   ├── qa_verifier.py                                 # (Phase 1 legacy scaffold - superseded by src/swarm/agents.py)
+│   ├── router.py                                      # (Phase 1 legacy scaffold - superseded by src/swarm/agents.py)
+│   └── swarm_pipeline.py                              # (Phase 1 legacy scaffold - superseded by src/swarm/swarm_runner.py)
 ├── tests/
-│   └── test_mock_repos.py        # 36 unit tests validating all 18 mock repositories
-├── requirements.txt              # Pinned Python dependencies
-└── README.md                     # Project documentation
+│   ├── test_baseline_client.py                        # Tests for monolithic baseline client
+│   ├── test_mock_repos.py                             # 36 unit tests validating all 18 mock repositories
+│   ├── test_sandbox.py                                # Tests for execution sandbox & diff application
+│   └── test_swarm.py                                  # Tests for LangGraph swarm workflow & agents
+├── requirements.txt                                   # Pinned Python dependencies
+└── README.md                                          # Project documentation
 ```
 
 ---
 
-## 🚀 Reproduction & Usage Guide
+## 🚀 Reproduction & Verification Guide
 
 ### 1. Environment Setup
 ```bash
@@ -156,41 +210,20 @@ pip install -r requirements.txt
 
 ### 2. Verify Harness & Mock Repositories
 ```bash
-# Verify sandbox and diff edge cases (4/4 must pass)
-python scripts/test_harness_cases.py
-
 # Verify ground-truth patches across all 18 repositories (36/36 must pass)
 python -m pytest tests/test_mock_repos.py
 ```
 
-### 3. Execute Swarm Benchmark Sweeps
+### 3. Run Pre-Commit Claim-to-Artifact Verification Audit
 ```bash
-# Full Swarm sweep (18 tasks x 3 seeds = 54 runs)
-python src/swarm_pipeline.py --seeds 42 43 44
-
-# Router ablation sweep on Easy tier (6 tasks x 3 seeds = 18 runs)
-python src/swarm_pipeline.py --ablate_router_easy --seeds 42 43 44
+# Enforces authenticity gates and verifies all numbers match raw CSV artifacts
+python analysis/verify_documentation_claims.py
 ```
 
-### 4. Execute Statistical Analysis & Plotting
+### 4. Recompute Statistical Significance & Comparisons
 ```bash
-# Run RQ1 ANOVA and non-parametric tests
-python analysis/anova_rq1.py
-
-# Run Router Ablation analysis
-python analysis/router_ablation.py
-
-# Run RQ2 Complexity Ceiling analysis
-python analysis/complexity_ceiling_rq2.py
-
-# Run RQ3 Hypothesis testing
-python analysis/hypothesis_test_rq3.py
-
-# Generate publication figures
-python analysis/plot_curves.py
-
-# Export master Excel workbook (Results.xlsx)
-python analysis/export_master_results.py
+# Recompute Fisher exact tests, Wilson CIs, and Haldane-Anscombe ORs
+python analysis/compare_swarm_vs_monolithic.py
 ```
 
 ---

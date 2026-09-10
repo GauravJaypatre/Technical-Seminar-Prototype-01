@@ -127,36 +127,15 @@ Output ONLY the unified diff block inside ```diff ... ``` code fences.
                     p_tokens = data.get("prompt_eval_count", len(prompt.split()) * 2)
                     c_tokens = data.get("eval_count", len(data.get("response", "").split()) * 2)
                     return data.get("response", ""), p_tokens, c_tokens, round(elapsed, 3)
-            except Exception:
-                pass
+            except Exception as e:
+                raise RuntimeError(
+                    f"Ollama request error for model '{self.model}': {e}. "
+                    "Offline fallback has been permanently neutralized to prevent synthetic benchmark generation."
+                )
 
-        # Offline Calibrated Multi-Iteration Swarm Simulator
-        # Demonstrates iterative self-correction across iterations 1 to 5:
-        # Pass@1 is moderate, but iterative feedback increases pass probability
-        import random
-        rng = random.Random(seed + _task_hash(meta["task_id"]) + iteration * 17)
-        tier = meta["tier"]
-
-        # Base pass probability increases with iteration (demonstrating self-correction)
-        base_probs = {
-            "easy": [0.45, 0.70, 0.90, 0.95, 0.95],
-            "medium": [0.25, 0.50, 0.70, 0.80, 0.80],
-            "hard": [0.10, 0.25, 0.40, 0.50, 0.50]
-        }
-        prob = base_probs.get(tier, [0.3]*5)[min(iteration - 1, 4)]
-        passes = rng.random() < prob
-
-        sim_latency = round(rng.uniform(3.8, 4.6), 3)
-        time.sleep(0.02)
-        p_tokens = len(prompt.split())
-        
-        if passes:
-            patch = meta["ground_truth_patch"]
-            c_tokens = len(patch.split())
-        else:
-            # Faulty patch attempt that triggers test failure
-            rel_file = meta["target_files"][0]
-            patch = f"--- a/{rel_file}\n+++ b/{rel_file}\n@@ -1,3 +1,3 @@\n-# Incomplete iteration {iteration} attempt\n+# Attempt {iteration} with pending assertion issues\n"
-            c_tokens = 45
-
-        return patch, p_tokens, c_tokens, sim_latency
+        # Offline fallback is permanently neutralized
+        raise RuntimeError(
+            "Offline simulation fallback has been permanently neutralized in src/code_analyzer.py. "
+            "Local Ollama server is offline or unreachable at http://localhost:11434. "
+            "Please ensure Ollama is running, or use the active LangGraph swarm runner (src/swarm/swarm_runner.py)."
+        )

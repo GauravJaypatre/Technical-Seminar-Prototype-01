@@ -120,19 +120,20 @@ Output a valid JSON object matching this schema:
                     p_tokens = data.get("prompt_eval_count", len(prompt.split()) * 2)
                     c_tokens = data.get("eval_count", len(data.get("response", "").split()) * 2)
                     return data.get("response", ""), p_tokens, c_tokens, round(elapsed, 3)
-            except Exception:
-                pass
+                else:
+                    raise RuntimeError(f"Ollama API returned HTTP {resp.status_code}: {resp.text}")
+            except Exception as e:
+                raise RuntimeError(
+                    f"Ollama request error for router model '{self.model}': {e}. "
+                    "Offline fallback has been permanently neutralized to prevent synthetic benchmark generation."
+                )
 
-        # Offline / Simulator fallback
-        sim_response = json.dumps({
-            "target_files": meta.get("target_files", ["src/main.py"]),
-            "bug_hypothesis": f"Identified potential logic discrepancy related to {meta.get('issue_title', 'reported defect')}",
-            "recommended_focus": f"Check boundary conditions and contract validation in {meta.get('target_files', ['source']) [0]}"
-        })
-        p_tokens = len(prompt.split())
-        c_tokens = len(sim_response.split())
-        time.sleep(0.01)
-        return sim_response, p_tokens, c_tokens, 1.35
+        # Offline fallback is permanently neutralized
+        raise RuntimeError(
+            "Offline simulation fallback has been permanently neutralized in src/router.py. "
+            "Local Ollama server is offline or unreachable at http://localhost:11434. "
+            "Please ensure Ollama is running or configure OLLAMA_HOST."
+        )
 
     def _parse_json_response(self, text: str, meta: Dict[str, Any]) -> Dict[str, Any]:
         """Safely parses JSON output with graceful fallback."""

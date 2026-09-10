@@ -95,37 +95,13 @@ def call_claude_api(prompt: str, seed: int = 42, temperature: float = 0.2) -> tu
 
 def call_mock_frontier(task_dir: str, seed: int, temperature: float = 0.2) -> tuple[str, int, int, float]:
     """
-    Simulated baseline calibrated to frontier LLM pass@1 rates from literature
-    (SWE-bench / HumanEvalPack pass rates for Claude 3.5 Sonnet:
-    ~83% Easy, ~67% Medium, ~33% Hard).
-    Used for local testing and validation when API credits/keys are not provided.
+    Offline mock simulation fallback has been PERMANENTLY NEUTRALIZED.
+    Prevents silent synthetic benchmark generation or ground-truth patch injection.
     """
-    with open(os.path.join(task_dir, "metadata.json"), "r", encoding="utf-8") as f:
-        meta = json.load(f)
-    tier = meta["tier"]
-
-    # Calibrated probability of single-shot success per tier
-    success_rates = {"easy": 0.85, "medium": 0.67, "hard": 0.35}
-    prob = success_rates.get(tier, 0.5)
-
-    # Seeded pseudo-random determination
-    rng = random.Random(seed + hash(meta["task_id"]))
-    passes = rng.random() < prob
-
-    start_time = time.time()
-    latency = rng.uniform(2.5, 5.0)
-    time.sleep(min(latency, 0.2))  # Brief pause
-
-    prompt_tokens = rng.randint(1200, 1800)
-    completion_tokens = rng.randint(350, 600)
-
-    if passes:
-        patch = meta["ground_truth_patch"]
-    else:
-        # Generate incomplete or slightly off patch
-        patch = "--- a/" + meta["target_files"][0] + "\n+++ b/" + meta["target_files"][0] + "\n@@ -1,3 +1,3 @@\n-# Incomplete patch attempt\n+# Faulty modification\n"
-
-    return patch, prompt_tokens, completion_tokens, latency
+    raise RuntimeError(
+        "Offline simulation fallback has been permanently neutralized in src/monolithic_baseline.py. "
+        "A live API connection is strictly required. Please run with `--live` and configure your API key or model endpoint."
+    )
 
 
 def run_monolithic_baseline(
@@ -160,17 +136,20 @@ def run_monolithic_baseline(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Initialize client if live
-    client = None
-    if live:
-        client = get_baseline_client(
-            provider=resolved_provider,
-            model_name=model_name,
-            max_rpm=max_rpm
+    # Enforce live execution requirement
+    if not live:
+        raise RuntimeError(
+            "Offline simulation mode has been permanently neutralized in src/monolithic_baseline.py. "
+            "A live API connection is strictly required. Pass `live=True` or run with `--live`."
         )
-        resolved_model = client.model_name
-    else:
-        resolved_model = model_name or ("claude-3-5-sonnet" if resolved_provider == "anthropic" else "openai/gpt-oss-120b")
+
+    # Initialize client
+    client = get_baseline_client(
+        provider=resolved_provider,
+        model_name=model_name,
+        max_rpm=max_rpm
+    )
+    resolved_model = client.model_name
 
     manifest_path = os.path.join(BASE_DIR, "data", "task_manifest.json")
     with open(manifest_path, "r", encoding="utf-8") as f:

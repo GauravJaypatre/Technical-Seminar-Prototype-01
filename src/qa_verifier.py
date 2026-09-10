@@ -105,18 +105,17 @@ Provide a structured diagnostic JSON matching this schema:
                     c_tokens = data.get("eval_count", len(data.get("response", "").split()) * 2)
                     parsed = json.loads(data.get("response", "{}"))
                     return parsed, p_tokens, c_tokens
-            except Exception:
-                pass
+                else:
+                    raise RuntimeError(f"Ollama API returned HTTP {resp.status_code}: {resp.text}")
+            except Exception as e:
+                raise RuntimeError(
+                    f"Ollama request error for verifier model '{self.model}': {e}. "
+                    "Offline fallback has been permanently neutralized to prevent synthetic benchmark generation."
+                )
 
-        # Offline fallback diagnostic generator
-        p_tokens = len(prompt.split())
-        err_snippet = failure_log[-400:] if failure_log else "Test assertion failed"
-        feedback = {
-            "failed_tests": sandbox_res.failed_tests or ["test_failure"],
-            "failure_type": "AssertionError" if "AssertionError" in failure_log else "TestExecutionFailure",
-            "root_cause_analysis": "The patched code failed assertion checks in pytest.",
-            "refinement_guidance": "Review the failing test assertions and ensure all edge cases and return types match specifications.",
-            "traceback_snippet": err_snippet
-        }
-        c_tokens = len(json.dumps(feedback).split())
-        return feedback, p_tokens, c_tokens
+        # Offline fallback is permanently neutralized
+        raise RuntimeError(
+            "Offline simulation fallback has been permanently neutralized in src/qa_verifier.py. "
+            "Local Ollama server is offline or unreachable at http://localhost:11434. "
+            "Please ensure Ollama is running or configure OLLAMA_HOST."
+        )

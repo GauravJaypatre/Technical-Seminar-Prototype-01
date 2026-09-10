@@ -108,6 +108,13 @@ def run_swarm_baseline(
 
     os.makedirs(output_dir, exist_ok=True)
 
+    # Enforce live execution requirement
+    if not live:
+        raise RuntimeError(
+            "Offline simulation mode has been permanently neutralized in src/swarm/swarm_runner.py. "
+            "A live API connection is strictly required. Pass `live=True` or run with `--live`."
+        )
+
     # Prevent Windows from sleeping/suspending during long unattended benchmark
     if sys.platform == "win32":
         try:
@@ -120,12 +127,12 @@ def run_swarm_baseline(
             pass
 
     # Compile LangGraph workflow
-    ollama_client = OllamaClient() if live else None
+    ollama_client = OllamaClient()
     app = build_swarm_graph(
         client=ollama_client,
         analyzer_model=analyzer_model,
         verifier_model=verifier_model
-    ) if live else None
+    )
 
     # Load tasks from canonical task manifest (exact same source of truth)
     manifest_path = os.path.join(BASE_DIR, "data", "task_manifest.json")
@@ -175,53 +182,43 @@ def run_swarm_baseline(
             monitor.start()
             run_start_time = time.time()
 
-            if live:
-                initial_state: SwarmState = {
-                    "task_id": task_id,
-                    "tier": tier,
-                    "task_dir": task_dir,
-                    "issue_text": issue_text,
-                    "target_files": target_files,
-                    "seed": seed,
-                    "temperature": 0.2,
-                    "routing_decision": {},
-                    "candidate_patch": "",
-                    "previous_patch": None,
-                    "qa_critique": None,
-                    "retry_count": 0,
-                    "is_valid": False,
-                    "qa_exhausted": False,
-                    "final_patch": "",
-                    "agents_involved": [],
-                    "total_prompt_tokens": 0,
-                    "total_completion_tokens": 0,
-                    "total_latency_sec": 0.0
-                }
+            initial_state: SwarmState = {
+                "task_id": task_id,
+                "tier": tier,
+                "task_dir": task_dir,
+                "issue_text": issue_text,
+                "target_files": target_files,
+                "seed": seed,
+                "temperature": 0.2,
+                "routing_decision": {},
+                "candidate_patch": "",
+                "previous_patch": None,
+                "qa_critique": None,
+                "retry_count": 0,
+                "is_valid": False,
+                "qa_exhausted": False,
+                "final_patch": "",
+                "agents_involved": [],
+                "total_prompt_tokens": 0,
+                "total_completion_tokens": 0,
+                "total_latency_sec": 0.0
+            }
 
-                try:
-                    final_state = app.invoke(initial_state)
-                    patch = final_state.get("final_patch") or final_state.get("candidate_patch", "")
-                    p_tokens = final_state.get("total_prompt_tokens", 0)
-                    c_tokens = final_state.get("total_completion_tokens", 0)
-                    agents = final_state.get("agents_involved", ["router", "code_analyzer", "qa_verifier"])
-                    router_sub_steps = final_state.get("routing_decision", {}).get("sub_steps", 1)
-                    qa_retries = final_state.get("retry_count", 0)
-                    qa_exhausted = final_state.get("qa_exhausted", False)
-                except Exception as e:
-                    print(f"[ERROR] Task {task_id} seed {seed} Swarm invocation failed: {e}")
-                    patch = f"# SWARM INVOCATION ERROR: {e}"
-                    p_tokens = 0
-                    c_tokens = 0
-                    agents = ["error"]
-                    router_sub_steps = 1
-                    qa_retries = 0
-                    qa_exhausted = False
-            else:
-                # Mock fallback mode for offline testing
-                patch = meta["ground_truth_patch"]
-                p_tokens = 350
-                c_tokens = 250
-                agents = ["router", "code_analyzer", "qa_verifier"]
+            try:
+                final_state = app.invoke(initial_state)
+                patch = final_state.get("final_patch") or final_state.get("candidate_patch", "")
+                p_tokens = final_state.get("total_prompt_tokens", 0)
+                c_tokens = final_state.get("total_completion_tokens", 0)
+                agents = final_state.get("agents_involved", ["router", "code_analyzer", "qa_verifier"])
+                router_sub_steps = final_state.get("routing_decision", {}).get("sub_steps", 1)
+                qa_retries = final_state.get("retry_count", 0)
+                qa_exhausted = final_state.get("qa_exhausted", False)
+            except Exception as e:
+                print(f"[ERROR] Task {task_id} seed {seed} Swarm invocation failed: {e}")
+                patch = f"# SWARM INVOCATION ERROR: {e}"
+                p_tokens = 0
+                c_tokens = 0
+                agents = ["error"]
                 router_sub_steps = 1
                 qa_retries = 0
                 qa_exhausted = False
@@ -283,11 +280,14 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int, default=None, help="Limit task count")
     parser.add_argument("--output-dir", type=str, default=None, help="Custom output directory")
     args = parser.parse_args()
-
-    is_live = not args.mock
+    if args.mock:
+        raise RuntimeError(
+            "Offline mock mode has been permanently neutralized in src/swarm/swarm_runner.py. "
+            "Execute with --live against running Ollama service."
+        )
 
     run_swarm_baseline(
-        live=is_live,
+        live=args.live,
         analyzer_model=args.analyzer,
         verifier_model=args.verifier,
         seeds=args.seeds,
