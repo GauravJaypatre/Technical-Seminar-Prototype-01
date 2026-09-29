@@ -1,0 +1,7 @@
+Users report being unable to log in when typing their email address in lowercase or mixed case if they registered with capital letters (e.g. 'Alice.Smith@Example.COM').
+In `get_user_by_email`, lookups currently fail because dictionary keys are matched with exact case.
+Email lookups and registration must be case-insensitive, normalizing emails to lowercase so that `get_user_by_email('alice.smith@example.com')` correctly returns the user registered as 'Alice.Smith@Example.COM'.
+Inviolable constraints:
+- Must preserve return type dict | None
+- Do not modify existing method signatures
+Acceptance oracle: `test_case_insensitive_email_lookup` must pass.
