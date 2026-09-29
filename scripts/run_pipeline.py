@@ -25,6 +25,7 @@ except Exception:
     pass
 
 from src.config import AERSConfig, get_config
+from src.model.inference import FakeLLM
 from src.pipeline import AERSPipeline
 from src.schemas import FailureDiagnosis, PatchResult
 
@@ -98,6 +99,8 @@ def main() -> int:
 
     print("\n" + "=" * 60)
     print("           AERS-SLM RUNTIME INITIATED")
+    if config.dry_run:
+        print("  [MOCK MODE - output is canned and not related to the issue]")
     print(f" Target Repository : {repo_path}")
     print(f" Dry Run Mode      : {config.dry_run}")
     print(f" Context Budget    : {config.context_budget} tokens")
@@ -106,23 +109,43 @@ def main() -> int:
 
     result = pipeline.run(issue=issue_text, repo_path=repo_path)
 
+    is_mock = config.dry_run or isinstance(pipeline.engine, FakeLLM)
+    if is_mock:
+        print("\n" + "*" * 72)
+        print("  [MOCK MODE - output is canned and not related to the issue]")
+        print("  Execution was performed using FakeLLM without loading real weights.")
+        print("*" * 72)
+
+    tracker_summary = pipeline.engine.tracker.summary() if hasattr(pipeline.engine, "tracker") else {}
+    peak_rss = tracker_summary.get("peak_rss_mb", 0.0)
+
     print("\n" + "=" * 60)
     if isinstance(result, PatchResult):
         print(" [SUCCESS] PATCH GENERATED AND VERIFIED")
         print(f" Attempts Required : {result.attempts}")
+        print(f" Peak Process RSS  : {peak_rss:.2f} MB")
         print("=" * 60)
         print("\n--- Unified Diff ---")
         print(result.diff)
         print("--------------------")
         print(f"Test Execution Log: {result.test_log}")
+        if is_mock:
+            print("\n" + "*" * 72)
+            print("  [MOCK MODE - output is canned and not related to the issue]")
+            print("*" * 72)
         return 0
     elif isinstance(result, FailureDiagnosis):
         print(" [FAILED] PIPELINE CONCLUDED WITH FAILURE DIAGNOSIS")
-        print(f" Failed Stage : {result.stage}")
-        print(f" Reason       : {result.reason}")
+        print(f" Failed Stage     : {result.stage}")
+        print(f" Reason           : {result.reason}")
+        print(f" Peak Process RSS : {peak_rss:.2f} MB")
         print("=" * 60)
         print("\n--- Final Evidence Baton ---")
         print(result.baton.to_json(indent=2))
+        if is_mock:
+            print("\n" + "*" * 72)
+            print("  [MOCK MODE - output is canned and not related to the issue]")
+            print("*" * 72)
         return 1
     else:
         print(" [UNKNOWN] Unexpected pipeline result type.")
