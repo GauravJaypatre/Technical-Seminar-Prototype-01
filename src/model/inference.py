@@ -18,6 +18,9 @@ from src.config import AERSConfig, get_config
 from src.model.llama_runtime import LlamaRuntime
 from src.schemas import estimate_token_count
 
+import threading
+import psutil
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
@@ -40,10 +43,54 @@ class UsageRecord(BaseModel):
 
 
 class UsageTracker:
-    """Tracks token consumption and latency metrics across stages for Member 4."""
+    """Tracks token consumption, latency metrics, and sampled peak resident RAM (RSS)."""
 
     def __init__(self) -> None:
         self.records: list[UsageRecord] = []
+        self.peak_rss_mb: float = self.get_current_rss_mb()
+        self._monitor_thread: threading.Thread | None = None
+        self._stop_monitor: threading.Event = threading.Event()
+
+    @staticmethod
+    def get_current_rss_mb() -> float:
+        """Sample current process resident set size (RSS) in megabytes."""
+        try:
+            return round(psutil.Process().memory_info().rss / (1024 * 1024), 2)
+        except Exception:
+            return 0.0
+
+    def start_memory_monitor(self, interval_sec: float = 0.05) -> None:
+        """Start a background sampling thread to continuously measure peak RSS."""
+        if self._monitor_thread is not None and self._monitor_thread.is_alive():
+            return
+
+        self._stop_monitor.clear()
+        self.peak_rss_mb = max(self.peak_rss_mb, self.get_current_rss_mb())
+
+        def _sample_loop() -> None:
+            proc = psutil.Process()
+            while not self._stop_monitor.is_set():
+                try:
+                    rss = proc.memory_info().rss / (1024 * 1024)
+                    if rss > self.peak_rss_mb:
+                        self.peak_rss_mb = round(rss, 2)
+                except Exception:
+                    pass
+                time.sleep(interval_sec)
+
+        self._monitor_thread = threading.Thread(target=_sample_loop, daemon=True, name="RSSMonitor")
+        self._monitor_thread.start()
+        logger.debug("Started background RSS memory monitor (sampling every %.2fs)", interval_sec)
+
+    def stop_memory_monitor(self) -> float:
+        """Stop background memory monitor and return peak observed RSS in MB."""
+        self._stop_monitor.set()
+        if self._monitor_thread is not None:
+            self._monitor_thread.join(timeout=1.0)
+            self._monitor_thread = None
+        self.peak_rss_mb = max(self.peak_rss_mb, self.get_current_rss_mb())
+        logger.debug("Stopped memory monitor. Peak RSS: %.2f MB", self.peak_rss_mb)
+        return self.peak_rss_mb
 
     def record(
         self,
@@ -52,6 +99,8 @@ class UsageTracker:
         completion_tokens: int,
         latency_ms: float,
     ) -> None:
+        # Update peak RSS upon call completion
+        self.peak_rss_mb = max(self.peak_rss_mb, self.get_current_rss_mb())
         rec = UsageRecord(
             stage=stage,
             prompt_tokens=prompt_tokens,
@@ -61,11 +110,12 @@ class UsageTracker:
         )
         self.records.append(rec)
         logger.debug(
-            "Stage '%s' used %d prompt / %d completion tokens (%.1f ms)",
+            "Stage '%s' used %d prompt / %d completion tokens (%.1f ms) [Current RSS: %.1f MB]",
             stage,
             prompt_tokens,
             completion_tokens,
             latency_ms,
+            self.get_current_rss_mb(),
         )
 
     @property
@@ -89,13 +139,15 @@ class UsageTracker:
         return len(self.records)
 
     def summary(self) -> dict[str, Any]:
-        """Summary dictionary of usage metrics."""
+        """Summary dictionary of usage metrics including measured peak RSS."""
+        self.peak_rss_mb = max(self.peak_rss_mb, self.get_current_rss_mb())
         return {
             "total_calls": self.total_calls,
             "total_prompt_tokens": self.total_prompt_tokens,
             "total_completion_tokens": self.total_completion_tokens,
             "total_tokens": self.total_tokens,
             "total_latency_ms": round(self.total_latency_ms, 2),
+            "peak_rss_mb": round(self.peak_rss_mb, 2),
             "stage_breakdown": {
                 r.stage: {
                     "prompt_tokens": sum(x.prompt_tokens for x in self.records if x.stage == r.stage),
@@ -108,6 +160,7 @@ class UsageTracker:
 
     def reset(self) -> None:
         self.records.clear()
+        self.peak_rss_mb = self.get_current_rss_mb()
 
 
 def repair_json_string(raw: str) -> str:
@@ -250,6 +303,15 @@ class InferenceEngine:
             completion_tokens=comp_token_count,
             latency_ms=latency_ms,
         )
+        self.last_call_metadata = {
+            "stage": stage_name,
+            "raw_output": text,
+            "prompt_tokens": prompt_token_count,
+            "completion_tokens": comp_token_count,
+            "latency_ms": round(latency_ms, 2),
+            "attempts": 1,
+            "first_try_valid": True,
+        }
         return text
 
     def stream(
@@ -361,8 +423,24 @@ class InferenceEngine:
             try:
                 parsed_dict = json.loads(repaired)
                 if is_pydantic:
-                    return schema.model_validate(parsed_dict)
-                return parsed_dict
+                    result = schema.model_validate(parsed_dict)
+                else:
+                    result = parsed_dict
+
+                # Record metadata for reporting and observability
+                prev_meta = getattr(self, "last_call_metadata", {})
+                self.last_call_metadata = {
+                    "stage": stage_name,
+                    "raw_output": raw,
+                    "repaired_output": repaired,
+                    "attempts": attempt + 1,
+                    "first_try_valid": (attempt == 0 and repaired == raw.strip()),
+                    "needed_repair": (repaired != raw.strip()),
+                    "prompt_tokens": prev_meta.get("prompt_tokens", 0),
+                    "completion_tokens": prev_meta.get("completion_tokens", 0),
+                    "latency_ms": prev_meta.get("latency_ms", 0.0),
+                }
+                return result
             except (json.JSONDecodeError, ValidationError, Exception) as e:
                 last_error = str(e)
                 logger.warning("JSON parsing/validation failed on attempt %d: %s", attempt, e)
