@@ -133,6 +133,10 @@ class AERSPipeline:
         logger.info("Starting AERS-SLM pipeline for repo: %s", repo)
         pipeline_start = time.perf_counter()
 
+        # Start background resident memory (RSS) sampling
+        if hasattr(self.engine, "tracker") and hasattr(self.engine.tracker, "start_memory_monitor"):
+            self.engine.tracker.start_memory_monitor()
+
         # Dummy baton for fallback diagnostics
         fallback_contract = RequirementContract(
             task_type="bug_fix",
@@ -159,12 +163,22 @@ class AERSPipeline:
             b0_tokens = b0.token_count()
 
             duration_ms = (time.perf_counter() - stage_start) * 1000.0
+            meta1 = getattr(self.engine, "last_call_metadata", {})
             self.structured_logger.log_event(
                 stage="Stage 1: Profiler & Contract",
                 status="SUCCESS",
                 duration_ms=duration_ms,
                 baton_tokens=b0_tokens,
-                details={"task_type": contract.task_type, "language": profile.language},
+                details={
+                    "task_type": contract.task_type,
+                    "language": profile.language,
+                    "raw_output": meta1.get("raw_output", ""),
+                    "attempts": meta1.get("attempts", 1),
+                    "first_try_valid": meta1.get("first_try_valid", True),
+                    "prompt_tokens": meta1.get("prompt_tokens", 0),
+                    "completion_tokens": meta1.get("completion_tokens", 0),
+                    "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                },
             )
         except Exception as e:
             logger.exception("Error in Stage 1")
@@ -188,7 +202,10 @@ class AERSPipeline:
                 status="SUCCESS",
                 duration_ms=duration_ms,
                 baton_tokens=b0.token_count(),
-                details={"context_chars": len(compiled_context)},
+                details={
+                    "context_chars": len(compiled_context),
+                    "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                },
             )
         except Exception as e:
             logger.exception("Error in Stage 2")
@@ -213,6 +230,7 @@ class AERSPipeline:
             b1_tokens = b1.token_count()
 
             duration_ms = (time.perf_counter() - stage_start) * 1000.0
+            meta3 = getattr(self.engine, "last_call_metadata", {})
             self.structured_logger.log_event(
                 stage="Stage 3: Fault Localizer",
                 status="SUCCESS",
@@ -221,6 +239,12 @@ class AERSPipeline:
                 details={
                     "candidate_files": b1.candidate_files,
                     "ranges_count": len(b1.suspicious_ranges),
+                    "raw_output": meta3.get("raw_output", ""),
+                    "attempts": meta3.get("attempts", 1),
+                    "first_try_valid": meta3.get("first_try_valid", True),
+                    "prompt_tokens": meta3.get("prompt_tokens", 0),
+                    "completion_tokens": meta3.get("completion_tokens", 0),
+                    "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
                 },
             )
         except Exception as e:
@@ -239,12 +263,21 @@ class AERSPipeline:
             b2_tokens = b2.token_count()
 
             duration_ms = (time.perf_counter() - stage_start) * 1000.0
+            meta4 = getattr(self.engine, "last_call_metadata", {})
             self.structured_logger.log_event(
                 stage="Stage 4: Hypothesis Agent",
                 status="SUCCESS",
                 duration_ms=duration_ms,
                 baton_tokens=b2_tokens,
-                details={"hypotheses_count": len(hypotheses)},
+                details={
+                    "hypotheses_count": len(hypotheses),
+                    "raw_output": meta4.get("raw_output", ""),
+                    "attempts": meta4.get("attempts", 1),
+                    "first_try_valid": meta4.get("first_try_valid", True),
+                    "prompt_tokens": meta4.get("prompt_tokens", 0),
+                    "completion_tokens": meta4.get("completion_tokens", 0),
+                    "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                },
             )
         except Exception as e:
             logger.exception("Error in Stage 4")
@@ -301,13 +334,21 @@ class AERSPipeline:
 
                 duration_ms = (time.perf_counter() - stage_start) * 1000.0
 
+                meta6 = getattr(self.engine, "last_call_metadata", {})
                 if test_result.passed:
                     self.structured_logger.log_event(
                         stage=f"Stage 6: Patch Attempt {attempt_num}",
                         status="PASSED",
                         duration_ms=duration_ms,
                         baton_tokens=b3.token_count(),
-                        details={"attempts": attempt_num, "diff_size": len(patch)},
+                        details={
+                            "attempts": attempt_num,
+                            "diff_size": len(patch),
+                            "raw_output": meta6.get("raw_output", ""),
+                            "prompt_tokens": meta6.get("prompt_tokens", 0),
+                            "completion_tokens": meta6.get("completion_tokens", 0),
+                            "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                        },
                     )
                     logger.info("Pipeline succeeded on attempt %d!", attempt_num)
                     return PatchResult(
@@ -334,7 +375,14 @@ class AERSPipeline:
                     status="RETRY_TRIGGERED",
                     duration_ms=duration_ms,
                     baton_tokens=b3.token_count(),
-                    details={"error_snippet": last_test_error[:200]},
+                    details={
+                        "attempts": attempt_num,
+                        "raw_output": meta6.get("raw_output", ""),
+                        "prompt_tokens": meta6.get("prompt_tokens", 0),
+                        "completion_tokens": meta6.get("completion_tokens", 0),
+                        "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                        "error_snippet": last_test_error[:200],
+                    },
                 )
 
             except Exception as e:
