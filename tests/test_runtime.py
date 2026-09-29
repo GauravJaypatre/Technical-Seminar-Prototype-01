@@ -1,4 +1,5 @@
-"""Tests for model runtime, inference engine, JSON repair, and usage tracking."""
+import json
+import time
 
 import pytest
 
@@ -35,7 +36,9 @@ def test_repair_json_embedded_in_chatter():
         "Let me know if you need more details!"
     )
     repaired = repair_json_string(raw)
-    assert '"task_type": "bug_fix"' in repaired
+    parsed = json.loads(repaired)
+    assert parsed["task_type"] == "bug_fix"
+    assert parsed["observed_behavior"] == "crash"
     assert not repaired.startswith("Here is")
     assert not repaired.endswith("details!")
 
@@ -56,6 +59,19 @@ def test_usage_tracker_metrics():
     assert summary["total_calls"] == 2
     assert "stage1" in summary["stage_breakdown"]
     assert summary["stage_breakdown"]["stage1"]["prompt_tokens"] == 100
+    assert summary["peak_rss_mb"] > 0.0
+
+
+def test_usage_tracker_memory_monitor():
+    """Verify background RSS memory monitor samples resident set size."""
+    tracker = UsageTracker()
+    tracker.start_memory_monitor(interval_sec=0.01)
+    # Allocate a small buffer
+    _ = [0] * 500_000
+    time.sleep(0.05)
+    peak = tracker.stop_memory_monitor()
+    assert peak > 0.0
+    assert tracker.peak_rss_mb == peak
 
 
 def test_guard_and_truncate_prompt():

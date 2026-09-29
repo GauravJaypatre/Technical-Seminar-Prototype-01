@@ -26,6 +26,7 @@ llama = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+norecursedirs = ["tests/fixtures", "fixtures", ".*", "build", "dist"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
