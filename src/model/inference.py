@@ -267,6 +267,7 @@ class InferenceEngine:
         stop: list[str] | None = None,
         temperature: float | None = None,
         stage_name: str = "general",
+        grammar: Any | None = None,
     ) -> str:
         """Non-streaming text generation."""
         max_toks = max_tokens or 1024
@@ -291,6 +292,8 @@ class InferenceEngine:
                 top_p=self.config.top_p,
                 stop=stop_tokens,
                 echo=False,
+                grammar=grammar,
+                seed=self.config.seed,
             )
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
@@ -372,8 +375,8 @@ class InferenceEngine:
     ) -> T | dict[str, Any]:
         """Generates JSON validated against a Pydantic schema or dict schema.
         
-        Attempts constrained decoding first if supported; repairs and retries
-        with corrective prompts up to max_retries.
+        Attempts constrained decoding first via LlamaGrammar; repairs and retries
+        with corrective prompts up to max_retries if needed.
         """
         curr_user = user
         last_error = ""
@@ -391,6 +394,18 @@ class InferenceEngine:
             f"{json.dumps(schema_hint, indent=2)}\n"
             f"Do not include explanation, chain of thought, or markdown fences."
         )
+
+        # Compile grammar for constrained decoding if available
+        grammar = None
+        if not self.config.dry_run and self.runtime.is_loaded():
+            try:
+                from llama_cpp.llama_grammar import LlamaGrammar
+                schema_json_str = json.dumps(schema_hint)
+                grammar = LlamaGrammar.from_json_schema(schema_json_str)
+                logger.debug("Successfully compiled LlamaGrammar for %s", stage_name)
+            except Exception as e:
+                logger.warning("Could not compile LlamaGrammar for %s: %s", stage_name, e)
+                grammar = None
 
         for attempt in range(max_retries + 1):
             if attempt > 0:
@@ -414,10 +429,11 @@ class InferenceEngine:
                 user=curr_user,
                 max_tokens=max_tokens,
                 stage_name=stage_name,
+                grammar=grammar,
             )
             last_output = raw
 
-            # Clean and repair common syntax issues
+            # Clean and repair common syntax issues as fallback
             repaired = repair_json_string(raw)
 
             try:
@@ -436,6 +452,7 @@ class InferenceEngine:
                     "attempts": attempt + 1,
                     "first_try_valid": (attempt == 0 and repaired == raw.strip()),
                     "needed_repair": (repaired != raw.strip()),
+                    "grammar_constrained": (grammar is not None),
                     "prompt_tokens": prev_meta.get("prompt_tokens", 0),
                     "completion_tokens": prev_meta.get("completion_tokens", 0),
                     "latency_ms": prev_meta.get("latency_ms", 0.0),

@@ -1,0 +1,9 @@
+Defect in invoice net settlement calculation during checkout:
+When generating customer invoices with fractional discounts, test_invoice_net_settlement_with_fractional_discount fails with:
+AssertionError: Expected 100.94, got 100.93
+
+Investigation notes:
+The billing checkout coordinator in billing/service.py delegates monetary rounding to the shared currency rounding policy.
+Due to floor truncation in the rounding policy rather than standard financial rounding, invoices are consistently under-billed by 1 cent on fractional totals.
+Fix the monetary rounding precision policy to round to the nearest cent (half-up) so invoices settle accurately.
+Preserve all existing method signatures and return types.

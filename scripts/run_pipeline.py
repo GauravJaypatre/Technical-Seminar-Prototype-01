@@ -54,6 +54,11 @@ def parse_arguments() -> argparse.Namespace:
         help="Path to custom YAML configuration file",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        help="Random seed for deterministic generation",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable detailed debug logging",
@@ -90,6 +95,8 @@ def main() -> int:
 
     if args.dry_run:
         config.dry_run = True
+    if args.seed is not None:
+        config.seed = args.seed
 
     issue_text = load_issue_content(args.issue)
     repo_path = Path(args.repo).resolve()

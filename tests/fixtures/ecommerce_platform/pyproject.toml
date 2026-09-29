@@ -1,0 +1,9 @@
+[project]
+name = "ecommerce-platform"
+version = "0.1.0"
+description = "Multi-tier commercial ecommerce platform"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

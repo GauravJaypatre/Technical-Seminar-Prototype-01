@@ -123,6 +123,24 @@ class AERSPipeline:
             sandbox=self.registry.sandbox,
         )
 
+    def _check_context_overflow(
+        self, stage: str, prompt_text: str, max_tokens: int, baton: EvidenceBaton
+    ) -> FailureDiagnosis | None:
+        """Verifies prompt does not exceed n_ctx - max_tokens."""
+        if hasattr(self.engine, "runtime") and self.engine.runtime and self.engine.runtime.is_loaded():
+            prompt_tokens = self.engine.runtime.count_tokens(prompt_text)
+        else:
+            prompt_tokens = len(prompt_text) // 4
+        allowed = self.config.n_ctx - max_tokens
+        if prompt_tokens > allowed:
+            msg = (
+                f"Context overflow in {stage}: prompt tokens ({prompt_tokens}) "
+                f"exceed allowed budget ({allowed} = n_ctx {self.config.n_ctx} - max_tokens {max_tokens})."
+            )
+            logger.error(msg)
+            return FailureDiagnosis(stage=stage, reason=msg, baton=baton)
+        return None
+
     def run(
         self,
         issue: str,
@@ -152,6 +170,10 @@ class AERSPipeline:
         # ---------------------------------------------------------------------
         stage_start = time.perf_counter()
         try:
+            overflow1 = self._check_context_overflow("Stage 1: Profiler & Contract", issue, self.config.max_tokens_profiler, b0)
+            if overflow1:
+                return overflow1
+
             # Stage 1a: Deterministic Scan
             profile = self.registry.profiler.profile(repo)
 
@@ -218,6 +240,10 @@ class AERSPipeline:
         # ---------------------------------------------------------------------
         stage_start = time.perf_counter()
         try:
+            overflow3 = self._check_context_overflow("Stage 3: Fault Localizer", compiled_context, self.config.max_tokens_localizer, b0)
+            if overflow3:
+                return overflow3
+
             localization = self.localizer_agent.run(
                 baton=b0,
                 context=compiled_context,
@@ -258,6 +284,10 @@ class AERSPipeline:
         # ---------------------------------------------------------------------
         stage_start = time.perf_counter()
         try:
+            overflow4 = self._check_context_overflow("Stage 4: Hypothesis Agent", compiled_context, self.config.max_tokens_hypothesis, b1)
+            if overflow4:
+                return overflow4
+
             hypotheses = self.hypothesis_agent.run(baton=b1, context=compiled_context)
             b2 = b1.update(hypotheses=hypotheses)
             b2_tokens = b2.token_count()
@@ -312,90 +342,107 @@ class AERSPipeline:
         # Stage 6: Patch Generator & Test Validation Retry Loop
         # ---------------------------------------------------------------------
         self.registry.sandbox.prepare(repo)
+        sandbox_target = getattr(self.registry.sandbox, "sandbox_path", repo)
         max_retries = self.config.max_retries
         last_test_error = ""
 
-        for attempt in range(1 + max_retries):
-            attempt_num = attempt + 1
-            stage_start = time.perf_counter()
-            logger.info("Stage 6 Patch Generation attempt %d/%d", attempt_num, 1 + max_retries)
+        try:
+            for attempt in range(1 + max_retries):
+                attempt_num = attempt + 1
+                stage_start = time.perf_counter()
+                logger.info("Stage 6 Patch Generation attempt %d/%d", attempt_num, 1 + max_retries)
 
-            try:
-                # Generate minimal unified diff
-                patch = self.patch_agent.run(
-                    baton=b3,
-                    context=compiled_context,
-                    attempt=attempt_num,
-                )
+                try:
+                    overflow6 = self._check_context_overflow("Stage 6: Patch Generator", compiled_context, self.config.max_tokens_patch, b3)
+                    if overflow6:
+                        return overflow6
 
-                # Validate patch in sandbox / test runner
-                applied = self.registry.sandbox.apply_patch(patch)
-                test_result = self.registry.test_runner.run(repo, patch)
+                    # Generate minimal unified diff
+                    patch = self.patch_agent.run(
+                        baton=b3,
+                        context=compiled_context,
+                        attempt=attempt_num,
+                    )
 
-                duration_ms = (time.perf_counter() - stage_start) * 1000.0
+                    # Validate patch in sandbox / test runner
+                    applied = self.registry.sandbox.apply_patch(patch)
+                    test_result = self.registry.test_runner.run(sandbox_target, patch)
 
-                meta6 = getattr(self.engine, "last_call_metadata", {})
-                if test_result.passed:
+                    duration_ms = (time.perf_counter() - stage_start) * 1000.0
+
+                    meta6 = getattr(self.engine, "last_call_metadata", {})
+                    fuzzy_used = getattr(self.registry.sandbox, "fuzzy_applied", False)
+                    canonical_diff = getattr(self.registry.sandbox, "canonical_diff", "") or patch
+
+                    if test_result.passed:
+                        self.structured_logger.log_event(
+                            stage=f"Stage 6: Patch Attempt {attempt_num}",
+                            status="PASSED",
+                            duration_ms=duration_ms,
+                            baton_tokens=b3.token_count(),
+                            details={
+                                "attempts": attempt_num,
+                                "diff_size": len(canonical_diff),
+                                "raw_output": meta6.get("raw_output", ""),
+                                "fuzzy_applied": fuzzy_used,
+                                "prompt_tokens": meta6.get("prompt_tokens", 0),
+                                "completion_tokens": meta6.get("completion_tokens", 0),
+                                "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                            },
+                        )
+                        logger.info("Pipeline succeeded on attempt %d! (fuzzy_applied=%s)", attempt_num, fuzzy_used)
+                        return PatchResult(
+                            diff=canonical_diff,
+                            passed=True,
+                            attempts=attempt_num,
+                            test_log=test_result.error_log or "All acceptance tests passed.",
+                        )
+
+                    # Test failed: record traceback, rollback repo sandbox
+                    last_test_error = test_result.error_log
+                    logger.warning(
+                        "Test validation failed on attempt %d: %s. Rolling back.",
+                        attempt_num,
+                        last_test_error[:150],
+                    )
+                    self.registry.sandbox.rollback()
+
+                    # Append error trace to baton (enforces hard cap <= 1,200 tokens)
+                    b3 = b3.append_traceback(test_result.error_log)
+
                     self.structured_logger.log_event(
                         stage=f"Stage 6: Patch Attempt {attempt_num}",
-                        status="PASSED",
+                        status="RETRY_TRIGGERED",
                         duration_ms=duration_ms,
                         baton_tokens=b3.token_count(),
                         details={
                             "attempts": attempt_num,
-                            "diff_size": len(patch),
                             "raw_output": meta6.get("raw_output", ""),
+                            "fuzzy_applied": fuzzy_used,
                             "prompt_tokens": meta6.get("prompt_tokens", 0),
                             "completion_tokens": meta6.get("completion_tokens", 0),
                             "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
+                            "error_snippet": last_test_error[:200],
                         },
                     )
-                    logger.info("Pipeline succeeded on attempt %d!", attempt_num)
-                    return PatchResult(
-                        diff=patch,
-                        passed=True,
-                        attempts=attempt_num,
-                        test_log=test_result.error_log or "All acceptance tests passed.",
-                    )
 
-                # Test failed: record traceback, rollback repo sandbox
-                last_test_error = test_result.error_log
-                logger.warning(
-                    "Test validation failed on attempt %d: %s. Rolling back.",
-                    attempt_num,
-                    last_test_error[:150],
-                )
-                self.registry.sandbox.rollback()
+                except Exception as e:
+                    logger.exception("Exception during Stage 6 attempt %d", attempt_num)
+                    self.registry.sandbox.rollback()
+                    b3 = b3.append_traceback(str(e))
 
-                # Append error trace to baton (enforces hard cap <= 1,200 tokens)
-                b3 = b3.append_traceback(test_result.error_log)
-
-                self.structured_logger.log_event(
-                    stage=f"Stage 6: Patch Attempt {attempt_num}",
-                    status="RETRY_TRIGGERED",
-                    duration_ms=duration_ms,
-                    baton_tokens=b3.token_count(),
-                    details={
-                        "attempts": attempt_num,
-                        "raw_output": meta6.get("raw_output", ""),
-                        "prompt_tokens": meta6.get("prompt_tokens", 0),
-                        "completion_tokens": meta6.get("completion_tokens", 0),
-                        "peak_rss_mb": getattr(self.engine.tracker, "peak_rss_mb", 0.0),
-                        "error_snippet": last_test_error[:200],
-                    },
-                )
-
-            except Exception as e:
-                logger.exception("Exception during Stage 6 attempt %d", attempt_num)
-                self.registry.sandbox.rollback()
-                b3 = b3.append_traceback(str(e))
-
-        # Rollback on final failure
-        self.registry.sandbox.rollback()
-        logger.error("Stage 6 exhausted all %d attempts.", 1 + max_retries)
-        return FailureDiagnosis(
-            stage="Stage 6: Patch Generator",
-            reason=f"Exhausted maximum retry budget ({1 + max_retries} attempts) without passing tests.",
-            baton=b3,
-            details={"attempts": 1 + max_retries, "last_test_error": last_test_error},
-        )
+            # Rollback on final failure
+            self.registry.sandbox.rollback()
+            logger.error("Stage 6 exhausted all %d attempts.", 1 + max_retries)
+            return FailureDiagnosis(
+                stage="Stage 6: Patch Generator",
+                reason=f"Exhausted maximum retry budget ({1 + max_retries} attempts) without passing tests.",
+                baton=b3,
+                details={"attempts": 1 + max_retries, "last_test_error": last_test_error},
+            )
+        finally:
+            if hasattr(self.registry.sandbox, "cleanup"):
+                try:
+                    self.registry.sandbox.cleanup()
+                except Exception as e:
+                    logger.warning("Sandbox cleanup exception: %s", e)

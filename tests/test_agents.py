@@ -143,3 +143,29 @@ def test_patch_generator_retry_traceback_prompt(fake_engine: FakeLLM, sample_con
     last_call = fake_engine.calls[-1]
     assert "PREVIOUS ATTEMPT FAILED WITH ERROR" in last_call["user"]
     assert "ZeroDivisionError" in last_call["user"]
+
+
+def test_localizer_candidate_files_capped_at_five(fake_engine: FakeLLM, tmp_path: Path, sample_contract: RequirementContract):
+    """Verify localizer agent enforces hard cap of k <= 5 candidate files."""
+    repo = tmp_path / "multi_file_repo"
+    repo.mkdir()
+    # Create 8 real files in repo
+    real_files = []
+    for i in range(8):
+        f = repo / f"file_{i}.py"
+        f.write_text(f"# file {i}\n", encoding="utf-8")
+        real_files.append(f"file_{i}.py")
+
+    fake_result = LocalizationResult(
+        candidate_files=real_files,
+        suspicious_ranges=[SuspiciousRange(file=rf, start=1, end=1, confidence=0.8) for rf in real_files],
+    )
+    fake_engine.set_response("stage3_localizer", fake_result)
+
+    agent = LocalizerAgent(engine=fake_engine)
+    baton = EvidenceBaton(requirement=sample_contract)
+    result = agent.run(baton=baton, context="", repo_path=repo)
+
+    assert len(result.candidate_files) <= 5
+    assert len(result.candidate_files) == 5
+    assert len(result.suspicious_ranges) <= 5
