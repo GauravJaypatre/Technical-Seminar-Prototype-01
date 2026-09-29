@@ -64,7 +64,7 @@ HYPOTHESIS_SYSTEM_PROMPT = """You are an expert Root Cause Analyst.
 Your objective is to formulate AT MOST 3 mutually exclusive, falsifiable hypotheses explaining the defect.
 
 CRITICAL RULES:
-1. Output RAW JSON ONLY with a list of hypotheses.
+1. Output RAW JSON ONLY directly. Do NOT wrap output in markdown code fences like ```json.
 2. Maximum 3 hypotheses.
 3. Every hypothesis MUST include a concrete `failure_mechanism` and an empirical `falsification_test` condition.
 4. No chain-of-thought or reasoning outside the JSON fields.
@@ -89,11 +89,11 @@ Output:
   "hypotheses": [
     {
       "id": "H1",
-      "statement": "Missing guard clause for empty collection before denominator calculation",
-      "failure_mechanism": "items count is 0, causing division by zero on line 45",
-      "falsification_test": "If count > 0 still triggers ZeroDivisionError, H1 is falsified",
+      "statement": "Missing key normalization in storage and lookup methods",
+      "failure_mechanism": "Dictionary keys stored with original casing, lookup fails on case mismatch",
+      "falsification_test": "If keys normalized on both insertion and retrieval still fail, H1 is falsified",
       "status": "PROPOSED",
-      "score": 0.92
+      "score": 0.95
     }
   ]
 }"""
@@ -102,19 +102,20 @@ PATCH_SYSTEM_PROMPT = """You are an expert Systems Software Engineer.
 Your objective is to generate a MINIMAL, precise unified diff that fixes the defect according to the RequirementContract and verified hypothesis.
 
 CRITICAL RULES:
-1. Output UNIFIED DIFF ONLY. Do not explain your changes. Do not wrap diff in markdown if possible.
-2. The patch must apply cleanly with `git apply`.
-3. Respect all inviolable_constraints.
-4. Minimal edits: change only the necessary lines. Do not reformat unrelated code.
-5. If retry traceback is provided, analyze the traceback and resolve the failure.
+1. Output UNIFIED DIFF ONLY. Start directly with `--- a/<file>` and `+++ b/<file>`. Do not explain changes.
+2. Complete fix: If dictionary keys or records must match case-insensitively, normalize keys (e.g. `.lower()`) in BOTH insertion/registration AND lookup methods!
+3. Accurate hunks: Each hunk must include 1-2 exact context lines before and after modifications.
+4. Respect all inviolable_constraints and preserve existing method signatures and return types.
+5. If a previous test traceback is provided, directly fix the root cause shown in the traceback.
 
 EXAMPLE OUTPUT:
 --- a/src/billing/tax.py
 +++ b/src/billing/tax.py
 @@ -42,3 +42,5 @@
-+    if not cart.items:
-+        return Decimal('0.00')
-     return total / len(cart.items)"""
+     def calculate_tax(self, cart: Cart) -> Decimal:
++        if not cart.items:
++            return Decimal('0.00')
+         return total / len(cart.items)"""
 
 CRITIC_SYSTEM_PROMPT = """You are a Falsification Critic.
 # TODO(member-3): Complete system prompt for conditional falsification critic.

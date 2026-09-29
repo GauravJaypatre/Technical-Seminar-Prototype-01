@@ -112,7 +112,9 @@ class PatchGeneratorAgent(BaseAgent[str]):
             f"=== VERIFIED HYPOTHESIS ===\n{hypothesis_str}\n\n"
             f"=== LOCALIZED FILES & CONTEXT ===\n{context}\n"
             f"{retry_section}\n"
-            f"Generate MINIMAL unified diff fixing the issue."
+            f"Generate MINIMAL unified diff fixing the issue. "
+            f"Remember: If case normalization is needed, apply it to BOTH registration and lookup methods. "
+            f"Output unified diff ONLY."
         )
 
         raw_output = self.engine.generate(
